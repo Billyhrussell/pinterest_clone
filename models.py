@@ -6,6 +6,7 @@ from flask_sqlalchemy import SQLAlchemy
 bcrypt = Bcrypt()
 db = SQLAlchemy()
 
+
 class User(db.Model):
     """User in the system."""
 
@@ -123,10 +124,11 @@ class User(db.Model):
         db.ForeignKey('users.id', ondelete='CASCADE')
     )
 
-class Vision_Board(db.Model):
-    """Vision Boards"""
 
-    __tablename__ = "vision_boards"
+class Collections(db.Model):
+    """Collections"""
+
+    __tablename__ = "collections"
 
     id = db.Column(
         db.Integer,
@@ -149,9 +151,46 @@ class Vision_Board(db.Model):
         primary_key=True,
     )
 
-    post_id = db.Column(
+    timestamp = db.Column(
+        db.DateTime,
+        nullable=False,
+        default=datetime.utcnow,
+    )
+
+
+class Pins(db.Model):
+    """Pins"""
+
+    __tablename__ = "pins"
+
+    id = db.Column(
         db.Integer,
-        db.ForeignKey('posts.id'),
+        primary_key=True,
+    )
+
+    title = db.Column(
+        db.String(100),
+        nullable=False,
+    )
+
+    picture_link = db.Column(
+        db.String(),
+        nullable=False,
+    )
+
+    link_to_original_pic = db.Column(
+        db.String(),
+        nullable=True,
+    )
+
+    description = db.Column(
+        db.String(500),
+        nullable=True,
+    )
+
+    user_posted = db.Column(
+        db.Integer,
+        db.ForeignKey('users.id', ondelete="cascade"),
         primary_key=True,
     )
 
@@ -161,3 +200,38 @@ class Vision_Board(db.Model):
         default=datetime.utcnow,
     )
 
+
+class Follows(db.Model):
+    """Connection of a follower <-> followed_user."""
+
+    __tablename__ = 'follows'
+
+    user_being_followed_id = db.Column(
+        db.Integer,
+        db.ForeignKey('users.id', ondelete="cascade"),
+        primary_key=True,
+    )
+
+    user_following_id = db.Column(
+        db.Integer,
+        db.ForeignKey('users.id', ondelete="cascade"),
+        primary_key=True,
+    )
+
+
+class CollectionsAndPins(db.Model):
+    """CollectionsAndPins"""
+
+    __tablename__ = 'collectionsAndPins'
+
+    collection_id = db.Column(
+        db.Integer,
+        db.ForeignKey('collection.id', ondelete="cascade"),
+        primary_key=True,
+    )
+
+    pin_id = db.Column(
+        db.Integer,
+        db.ForeignKey('pin.id', ondelete="cascade"),
+        primary_key=True,
+    )
