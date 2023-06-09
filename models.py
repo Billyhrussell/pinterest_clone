@@ -83,8 +83,8 @@ class User(db.Model):
     #     backref="following",
     # )
 
-    class Post(db.Model):
-    """ ... """
+class Post(db.Model):
+    """ a post created """
 
     __tablename__ = 'posts'
 

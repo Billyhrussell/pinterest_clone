@@ -1,146 +1,138 @@
 import os
+import boto3
 from dotenv import load_dotenv
-from csv import DictReader
-import sqlalchemy as sa
+# from werkzeug import secure_filename
 
-from flask import Flask, render_template, request, flash, redirect, session, g
-from flask_debugtoolbar import DebugToolbarExtension
+from flask import Flask, render_template, request, flash, redirect, session, g, jsonify
+from flask_cors import CORS
 from sqlalchemy.exc import IntegrityError
 
-from forms import EditProfileForm, UserAddForm, LoginForm, MessageForm, CSRFProtectForm
-from models import db, connect_db, User, Message, Like, Follows
+from models import db, connect_db, User, Likes, Dislikes
+
+import jwt
 
 load_dotenv()
+AWS_ACCESS_KEY_ID = os.environ['AWS_ACCESS_KEY_ID']
+AWS_SECRET_ACCESS_KEY = os.environ['AWS_SECRET_ACCESS_KEY']
+DATABSE_URL = os.environ['DATABASE_URL']
+BUCKET_NAME = os.environ['BUCKET_NAME']
+SECRET_KEY = os.environ['SECRET_KEY']
 
-CURR_USER_KEY = "curr_user"
+s3 = boto3.client(
+    "s3",
+    "us-west-1",
+    aws_access_key_id=AWS_ACCESS_KEY_ID,
+    aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+)
 
 app = Flask(__name__)
+CORS(app)
 
 # Get DB_URI from environ variable (useful for production/testing) or,
 # if not set there, use development local db.
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SQLALCHEMY_DATABASE_URI'] = (
-    os.environ['DATABASE_URL'].replace("postgres://", "postgresql://"))
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql:///friender'
+# os.environ['DATABASE_URL'].replace("postgres://", "postgresql://"))
 app.config['SQLALCHEMY_ECHO'] = False
-app.config['DEBUG_TB_INTERCEPT_REDIRECTS'] = False
 app.config['SECRET_KEY'] = os.environ['SECRET_KEY']
-toolbar = DebugToolbarExtension(app)
-
 
 connect_db(app)
 
 ##############################################################################
 # User signup/login/logout
 
-
-@app.before_request # do g attributes in here
+@app.before_request
 def add_user_to_g():
-    """If we're logged in, add curr user to Flask global."""
-
-    if CURR_USER_KEY in session:
-        g.user = User.query.get(session[CURR_USER_KEY])
-
+    header_token = request.headers.get('Authorization')
+    print("HEADER TOKEN", header_token)
+    if header_token:
+        token = header_token.split(" ")[1]
+        print("BEARER TOKEN", token)
+        print("TOKEN:", token)
+        if token:
+            try:
+                print("in try")
+                curr_user = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+                print("CURR USER")
+                g.user = curr_user
+            except:
+                g.user = None
+                print("error")
     else:
         g.user = None
 
-@app.before_request # do g attributes in here
-def add_CSRFProtectForm_to_g():
-    """ Add a CSRFProtectForm to g """
-    g.CSRFForm = CSRFProtectForm() # This will call this form on every single request!!!
-    # this can be called in jinja without referring to it because it's global
+def createToken(username):
+    encoded_jwt = jwt.encode({"username": username} , SECRET_KEY, algorithm='HS256')
+    return encoded_jwt
+
+def upload_image_get_url(image):
+    # Create bucket later for this app
+
+    key = image.filename
+    bucket = BUCKET_NAME
+    content_type = 'request.mimetype'
+    image_file = image
+    region = 'us-west-1'
+    location = boto3.client('s3').get_bucket_location(
+        Bucket=BUCKET_NAME)['LocationConstraint']
+
+    client = boto3.client('s3',
+                          region_name=region,
+                          endpoint_url=f'https://{bucket}.s3.{location}.amazonaws.com',
+                          aws_access_key_id=AWS_ACCESS_KEY_ID,
+                          aws_secret_access_key=AWS_SECRET_ACCESS_KEY)
+
+    url = f"https://{bucket}.s3.{region}.amazonaws.com/{bucket}/{key}"
+    client.put_object(Body=image_file,
+                      Bucket=bucket,
+                      Key=key,
+                      ContentType=content_type)
+
+    return url
 
 
-def do_login(user):
-    """Log in user."""
-
-    session[CURR_USER_KEY] = user.id
-
-
-def do_logout():
-    """Log out user."""
-
-    if CURR_USER_KEY in session:
-        del session[CURR_USER_KEY]
-
-
-@app.route('/signup', methods=["GET", "POST"])
+@app.post('/signup')
 def signup():
-    """Handle user signup.
 
-    Create new user and add to DB. Redirect to home page.
+    username = request.form["username"]
+    password = request.form["password"]
+    fullName = request.form["first_name"]
+    fullName = request.form["last_name"]
+    hobbies = request.form["email"]
 
-    If form not valid, present form.
+    # when creating file, needs to multi
+    # image = request.files["image"]
 
-    If the there already is a user with that username: flash message
-    and re-present form.
-    """
+    # userImg = upload_image_get_url(image)
 
-    if CURR_USER_KEY in session:
-        del session[CURR_USER_KEY]
-    form = UserAddForm()
+    user = User.signup(
+        username, password, fullName, hobbies
+    )
+    print("USER", user)
+    print("USERNAME", username)
+    # print("IMAGE", image)
+    # serialized = user.serialize()
+    db.session.commit()
 
-    if form.validate_on_submit():
-        try:
-            user = User.signup(
-                username=form.username.data,
-                password=form.password.data,
-                email=form.email.data,
-                image_url=form.image_url.data or User.image_url.default.arg,
-            )
-            db.session.commit()
+    token = createToken(username)
 
-        except IntegrityError:
-            flash("Username already taken", 'danger')
-            return render_template('users/signup.html', form=form)
+    return jsonify(token=token)
 
-        do_login(user)
-
-        return redirect("/")
-
-    else:
-        return render_template('users/signup.html', form=form)
-
-
-@app.route('/login', methods=["GET", "POST"])
+@app.post('/login')
 def login():
-    """Handle user login and redirect to homepage on success."""
+    username = request.json["username"]
+    password = request.json["password"]
 
-    form = LoginForm()
+    user = User.authenticate(username, password)
 
-    if form.validate_on_submit():
-        user = User.authenticate(
-            form.username.data,
-            form.password.data)
+    if user == False:
+        return (jsonify(message="Invalid username/password"), 401)
 
-        if user:
-            do_login(user)
-            flash(f"Hello, {user.username}!", "success")
-            return redirect("/")
+    token = createToken(username)
 
-        flash("Invalid credentials.", 'danger')
+    return jsonify(token=token)
 
-    return render_template('users/login.html', form=form)
+# ##############################################################################
+# # General user routes: IF LOGGED IN
 
-
-@app.post('/logout')
-def logout():
-    """Handle logout of user and redirect to homepage."""
-
-    if CURR_USER_KEY not in session:
-        flash("You are not logged in")
-        return redirect('/')
-
-    form = g.CSRFForm
-
-    # IMPLEMENT THIS AND FIX BUG
-    # DO NOT CHANGE METHOD ON ROUTE
-
-    if form.validate_on_submit():
-        do_logout()
-        flash("Logged out successfully")
-
-    return redirect('/')
-
-
-##############################################################################
-# General user routes:
+# # Show ALL users
