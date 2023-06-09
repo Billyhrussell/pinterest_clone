@@ -151,7 +151,7 @@ class User(db.Model):
                 return user
 
         return False
-    
+
     # messages = db.relationship('Message', backref="user")
     # likes = db.relationship('Message', secondary="likes", backref="users_liked")
     # #backref like_messages
@@ -177,6 +177,7 @@ class Posts(db.Model):
     image_url = db.Column(
         db.Text,
         default=DEFAULT_IMAGE_URL,
+        nullabl=False,
     )
 
     title = db.Column(
@@ -237,7 +238,7 @@ class Pins(db.Model):
         nullable=False,
     )
 
-    picture_link = db.Column(
+    picture = db.Column(
         db.String(),
         nullable=False,
     )
@@ -263,6 +264,41 @@ class Pins(db.Model):
         nullable=False,
         default=datetime.utcnow,
     )
+
+    def serialize(self):
+        """Serialize to dictionary"""
+        # serialization is python converting to JSON
+        return{
+            "title": self.title,
+            "picture": self.picture,
+            "link_to_original_pic": self.link_to_original_pic,
+            "description" : self.description,
+            "user_posted": self.user_posted,
+            "timestamp" : self.timestamp
+        }
+
+    @classmethod
+    def create(title, picture, link_to_original_pic, description, user_posted):
+        """Sign up user.
+
+        Hashes password and adds user to system.
+        """
+
+
+
+        pin = Pins(
+            title=title,
+            picture=picture,
+            link_to_original_pic=link_to_original_pic,
+            description=description,
+            user_posted=user_posted
+            about=about,
+        )
+
+        db.session.add(pin)
+
+        return pin
+
 
 class Collections(db.Model):
     """Collections"""
@@ -303,4 +339,33 @@ class Collections(db.Model):
         secondaryjoin=(CollectionsAndPins.pin_id == id),
     )
 
+class Tags(db.Model):
+    "Tags"
 
+    __tablename__ = "tags"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True,
+    )
+
+    tag = db.Column(
+        db.String(100),
+        nullable=False,
+    )
+
+    post_id = db.Column(
+        db.Integer,
+        db.ForeignKey('posts.id', ondelete="cascade"),
+        primary_key=True,
+    )
+
+def connect_db(app):
+
+    """Connect this database to provided Flask app.
+
+    You should call this in your Flask app.
+    """
+
+    db.app = app
+    db.init_app(app)
