@@ -6,6 +6,24 @@ from flask_sqlalchemy import SQLAlchemy
 bcrypt = Bcrypt()
 db = SQLAlchemy()
 
+DEFAULT_IMAGE_URL = "https://static.vecteezy.com/system/resources/thumbnails/009/734/564/small/default-avatar-profile-icon-of-social-media-user-vector.jpg"
+
+class Follows(db.Model):
+    """Connection of a follower <-> followed_user."""
+
+    __tablename__ = 'follows'
+
+    user_being_followed_id = db.Column(
+        db.Integer,
+        db.ForeignKey('users.id', ondelete="cascade"),
+        primary_key=True,
+    )
+
+    user_following_id = db.Column(
+        db.Integer,
+        db.ForeignKey('users.id', ondelete="cascade"),
+        primary_key=True,
+    )
 
 class User(db.Model):
     """User in the system."""
@@ -71,19 +89,33 @@ class User(db.Model):
         default=datetime.utcnow,
     )
 
+    def serialize(self):
+        """Serialize to dictionary"""
+        # serialization is python converting to JSON
+        return{
+            "username": self.username,
+            "first_name": self.firstName,
+            "last_name": self.lastName,
+            "email" : self.email,
+            "image_url": self.imageUrl,
+            "about" : self.about,
+            "location" : self.location,
+            "website" : self.website
+        }
+
     # messages = db.relationship('Message', backref="user")
     # likes = db.relationship('Message', secondary="likes", backref="users_liked")
     # #backref like_messages
 
-    # followers = db.relationship(
-    #     "User",
-    #     secondary="follows",
-    #     primaryjoin=(Follows.user_being_followed_id == id),
-    #     secondaryjoin=(Follows.user_following_id == id),
-    #     backref="following",
-    # )
+    followers = db.relationship(
+        "User",
+        secondary="follows",
+        primaryjoin=(Follows.user_being_followed_id == id),
+        secondaryjoin=(Follows.user_following_id == id),
+        backref="following",
+    )
 
-class Post(db.Model):
+class Posts(db.Model):
     """ a post created """
 
     __tablename__ = 'posts'
@@ -124,39 +156,22 @@ class Post(db.Model):
         db.ForeignKey('users.id', ondelete='CASCADE')
     )
 
+class CollectionsAndPins(db.Model):
+    """CollectionsAndPins"""
 
-class Collections(db.Model):
-    """Collections"""
+    __tablename__ = 'collectionsAndPins'
 
-    __tablename__ = "collections"
-
-    id = db.Column(
+    collection_id = db.Column(
         db.Integer,
+        db.ForeignKey('collection.id', ondelete="cascade"),
         primary_key=True,
     )
 
-    title = db.Column(
-        db.String(100),
-        nullable=False,
-    )
-
-    description = db.Column(
-        db.String(500),
-        nullable=False,
-    )
-
-    user_id = db.Column(
+    pin_id = db.Column(
         db.Integer,
-        db.ForeignKey('users.id', ondelete="cascade"),
+        db.ForeignKey('pin.id', ondelete="cascade"),
         primary_key=True,
     )
-
-    timestamp = db.Column(
-        db.DateTime,
-        nullable=False,
-        default=datetime.utcnow,
-    )
-
 
 class Pins(db.Model):
     """Pins"""
@@ -201,37 +216,44 @@ class Pins(db.Model):
     )
 
 
-class Follows(db.Model):
-    """Connection of a follower <-> followed_user."""
 
-    __tablename__ = 'follows'
+class Collections(db.Model):
+    """Collections"""
 
-    user_being_followed_id = db.Column(
+    __tablename__ = "collections"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True,
+    )
+
+    title = db.Column(
+        db.String(100),
+        nullable=False,
+    )
+
+    description = db.Column(
+        db.String(500),
+        nullable=False,
+    )
+
+    user_id = db.Column(
         db.Integer,
         db.ForeignKey('users.id', ondelete="cascade"),
         primary_key=True,
     )
 
-    user_following_id = db.Column(
-        db.Integer,
-        db.ForeignKey('users.id', ondelete="cascade"),
-        primary_key=True,
+    timestamp = db.Column(
+        db.DateTime,
+        nullable=False,
+        default=datetime.utcnow,
+    )
+
+    collection_and_pin = db.relationship(
+        "Collection and their pins",
+        secondary="pins",
+        primaryjoin=(CollectionsAndPins.collection_id == id),
+        secondaryjoin=(CollectionsAndPins.pin_id == id),
     )
 
 
-class CollectionsAndPins(db.Model):
-    """CollectionsAndPins"""
-
-    __tablename__ = 'collectionsAndPins'
-
-    collection_id = db.Column(
-        db.Integer,
-        db.ForeignKey('collection.id', ondelete="cascade"),
-        primary_key=True,
-    )
-
-    pin_id = db.Column(
-        db.Integer,
-        db.ForeignKey('pin.id', ondelete="cascade"),
-        primary_key=True,
-    )
