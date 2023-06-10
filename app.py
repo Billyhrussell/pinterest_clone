@@ -1,13 +1,13 @@
 import os
 import boto3
 from dotenv import load_dotenv
-# from werkzeug import secure_filename
+
 
 from flask import Flask, render_template, request, flash, redirect, session, g, jsonify
 from flask_cors import CORS
 from sqlalchemy.exc import IntegrityError
 
-from models import db, connect_db, User, Likes, Dislikes
+from models import db, connect_db, User, Pins, Collections
 
 import jwt
 
@@ -96,9 +96,9 @@ def signup():
 
     username = request.form["username"]
     password = request.form["password"]
-    fullName = request.form["first_name"]
-    fullName = request.form["last_name"]
-    hobbies = request.form["email"]
+    firstName = request.form["first_name"]
+    lastName = request.form["last_name"]
+    email = request.form["email"]
 
     # when creating file, needs to multi
     # image = request.files["image"]
@@ -106,7 +106,7 @@ def signup():
     # userImg = upload_image_get_url(image)
 
     user = User.signup(
-        username, password, fullName, hobbies
+        username, password, firstName, lastName, email
     )
     print("USER", user)
     print("USERNAME", username)
@@ -135,4 +135,233 @@ def login():
 # ##############################################################################
 # # General user routes: IF LOGGED IN
 
-# # Show ALL users
+@app.get('/users')
+def list_users():
+    """Page with listing of users.
+
+    Can take a 'q' param in querystring to search by that username.
+    """
+
+    if not g.user:
+        flash("Access unauthorized.", "danger")
+        return redirect("/")
+
+    search = request.args.get('q')
+
+    if not search:
+        users = User.query.all()
+    else:
+        users = User.query.filter(User.username.like(f"%{search}%")).all()
+
+    return render_template('users/index.html', users=users)
+
+@app.get('<username>')
+def show_user(username):
+    """Show user profile."""
+
+    if not g.user:
+        return (jsonify(message="Not Authorized"), 401)
+
+    user = User.query.get_or_404(username)
+
+    serialized = user.serialize()
+    return jsonify( user= serialized)
+
+@app.post('/profile-settings')
+def edit():
+    if not g.user:
+        return (jsonify(message="Not Authorized"), 401)
+
+    user = User.query.get_or_404(request.json["id"])
+
+    user.username = request.form["username"]
+    user.firstName = request.form["first_name"]
+    user.lastName = request.form["last_name"]
+    user.email = request.form["email"]
+    user.image = request.form["image"]
+    user.about = request.form["about"]
+    user.website = request.form["website"]
+
+    db.session.commit()
+
+    serialized = user.serialize()
+
+    return jsonify(user=serialized)
+
+
+
+
+##############################################################################
+# PINS AND COLLECTIONS
+@app.get('/pin/<id>')
+def show_post(id):
+    """Show a pin"""
+
+    pin = Pins.query.get_or_404(id)
+
+    serialized = pin.serialize()
+
+    return jsonify(pin=serialized)
+
+@app.post('/pin/create')
+def create_pin():
+    "Create a pin"
+
+    title = request.form["title"]
+    description = request.form["description"]
+    picture = request.form["picture"]
+    original_picture_link = request.form["original-picture-link"]
+    user_posted = g.user
+
+    pin = Pins.create(
+        title, description, picture, original_picture_link, user_posted
+    )
+
+    g.user.pins.append(pin)
+    db.session.commit()
+
+    serialized = pin.serialize()
+
+    return jsonify(pin=pin)
+
+@app.post('/delete-pin')
+def delete_pin():
+    "Delete a pin"
+
+    id = request.json["id"]
+
+    pin = Pins.query.get_or_404(id)
+
+    g.user.pins.remove(pin)
+
+    db.session.commit()
+
+    return jsonify(pin=pin)
+
+@app.get('/pin/')
+def show_all():
+    "Show all pins that exist"
+    pins = Pins.query.all()
+
+    serialized = pins.serialize()
+
+    return jsonify(pins=pins)
+
+@app.get('/<username>/created')
+def show_created_pins():
+    """Show pins created by user"""
+    id = request.json["id"]
+
+    user = User.query.get_or_404(id)
+    pins = user.pins()
+
+    # FIXME: can we return pins that have not been serialized?
+    # may have to fix this for most routes
+    return jsonify(pins=pins)
+
+@app.get("/<username>/saved")
+def show_collections():
+    """Show collections """
+    id = request.json["id"]
+
+    user = User.query.get_or_404(id)
+    collections = user.collections()
+
+    return jsonify(collections=collections)
+
+@app.get("/<username>/<title>")
+def show_pins_in_collection():
+    """Show pins in a collection"""
+    id = request.json["id"]
+
+    collection = Collections.query.get_or_404(id)
+
+    pins = collection.collection_and_pins()
+
+    return jsonify(pins=pins)
+
+@app.post("/createBoard")
+def create_collection():
+
+    title = request.form["title"]
+    description = request.form["description"]
+    # user_created = g.user
+
+    collection = Collections.create(title,description)
+    g.user.collections.append(collection)
+
+    db.session.commit()
+
+    return jsonify(collection=collection)
+
+@app.post("/deleteBoard")
+def delete_collection():
+    id = request.json[id]
+
+    collection = Collections.query.get_or_404(id)
+
+    g.user.collections.remove(collection)
+
+    # NOTE: need to delete from collection table too?
+    db.session.commit()
+
+    return jsonify(collection=collection)
+
+##############################################################################
+# Following and Followers
+@app.get('/<username>/following')
+def show_following():
+    """Show list of people this user is following."""
+
+    user_id = request.json["id"]
+
+    user = User.query.get_or_404(user_id)
+    return render_template('users/following.html', user=user.following())
+
+@app.get('/<username>/followers')
+def show_followers():
+    """Show list of people this user is following."""
+
+    user_id = request.json["id"]
+
+    user = User.query.get_or_404(user_id)
+    return render_template('users/following.html', user=user.followers())
+
+@app.post('/follow/<id>')
+def follow(id):
+    """follow a user"""
+    follow_user = User.query.get_or_404(id)
+
+    g.user.following.append(follow_user)
+
+    db.session.commit()
+
+    return jsonify(user=follow_user)
+
+@app.post('/unfollow/<id>')
+def unfollow(id):
+    """unfollow a user"""
+    unfollow_user = User.query.get_or_404(id)
+
+    g.user.following.remove(unfollow_user)
+
+    db.session.commit()
+
+    return jsonify(user=unfollow_user)
+
+
+
+
+
+# /login DONE:
+# /signup DONE:
+# /
+# /createPin DONE:
+# /username (default to saved) DONE:
+# /profile-settings DONE:
+
+# /username/created DONE:
+
+# /username/collectionName DONE:
+
+# /pin/PinId DONE:

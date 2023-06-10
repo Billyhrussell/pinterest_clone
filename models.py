@@ -164,9 +164,14 @@ class User(db.Model):
         backref="following",
     )
 
+    # FIXME: forgot how to do these
+    pins = db.relationship("Pins", secondary="pins", backref="user")
+    collections = db.relationship("Collections", backref="user")
+
+
 class Posts(db.Model):
     """ a post created """
-
+    # FIXME: this need 2 be deleted 
     __tablename__ = 'posts'
 
     id = db.Column(
@@ -284,15 +289,12 @@ class Pins(db.Model):
         Hashes password and adds user to system.
         """
 
-
-
         pin = Pins(
             title=title,
             picture=picture,
             link_to_original_pic=link_to_original_pic,
             description=description,
-            user_posted=user_posted
-            about=about,
+            user_posted=user_posted,
         )
 
         db.session.add(pin)
@@ -331,6 +333,22 @@ class Collections(db.Model):
         nullable=False,
         default=datetime.utcnow,
     )
+
+    @classmethod
+    def create(title, description, user_posted):
+        """Sign up user.
+
+        Hashes password and adds user to system.
+        """
+
+        collection = Collections(
+            title=title,
+            description=description,
+        )
+
+        db.session.add(collection)
+
+        return collection
 
     collection_and_pin = db.relationship(
         "Collection and their pins",
