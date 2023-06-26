@@ -1,12 +1,11 @@
 import os
 import boto3
 from dotenv import load_dotenv
-
-
+from csv import DictReader
 from flask import Flask, render_template, request, flash, redirect, session, g, jsonify
 from flask_cors import CORS
 from sqlalchemy.exc import IntegrityError
-
+import sqlalchemy as sa
 from models import db, connect_db, User, Pins, Collections
 
 import jwt
@@ -31,12 +30,36 @@ CORS(app)
 # Get DB_URI from environ variable (useful for production/testing) or,
 # if not set there, use development local db.
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql:///friender'
-# os.environ['DATABASE_URL'].replace("postgres://", "postgresql://"))
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql:///pinterest'
+os.environ['DATABASE_URL'].replace("postgres://", "postgresql://")
 app.config['SQLALCHEMY_ECHO'] = False
 app.config['SECRET_KEY'] = os.environ['SECRET_KEY']
 
 connect_db(app)
+
+# Check if the database needs to be initialized
+engine = sa.create_engine(app.config['SQLALCHEMY_DATABASE_URI'])
+inspector = sa.inspect(engine)
+if not inspector.has_table("messages"):
+    app.logger.info("trying 2 do the thing")
+    with app.app_context():
+        db.drop_all()
+        db.create_all()
+
+        with open('generator/users.csv') as users:
+            db.session.bulk_insert_mappings(User, DictReader(users))
+
+        with open('generator/pins.csv') as pins:
+            db.session.bulk_insert_mappings(Pins, DictReader(pins))
+
+        # with open('generator/collections.csv') as collections:
+        #     db.session.bulk_insert_mappings(Collections, DictReader(collections))
+
+        db.session.commit()
+
+        app.logger.info('Initialized the database!')
+else:
+    app.logger.info('Database already contains the messages table.')
 
 ##############################################################################
 # User signup/login/logout
@@ -155,7 +178,7 @@ def list_users():
 
     return render_template('users/index.html', users=users)
 
-@app.get('<username>')
+@app.get('/<username>')
 def show_user(username):
     """Show user profile."""
 

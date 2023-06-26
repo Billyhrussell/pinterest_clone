@@ -6,7 +6,7 @@ from flask_sqlalchemy import SQLAlchemy
 bcrypt = Bcrypt()
 db = SQLAlchemy()
 
-DEFAULT_IMAGE_URL = "https://static.vecteezy.com/system/resources/thumbnails/009/734/564/small/default-avatar-profile-icon-of-social-media-user-vector.jpg"
+DEFAULT_IMAGE_URL = "/https://static.vecteezy.com/system/resources/thumbnails/009/734/564/small/default-avatar-profile-icon-of-social-media-user-vector.jpg"
 
 class Follows(db.Model):
     """Connection of a follower <-> followed_user."""
@@ -169,69 +169,52 @@ class User(db.Model):
     collections = db.relationship("Collections", backref="user")
 
 
-class Posts(db.Model):
-    """ a post created """
-    # FIXME: this need 2 be deleted 
-    __tablename__ = 'posts'
+# class Posts(db.Model):
+#     """ a post created """
+#     # FIXME: this need 2 be deleted
+#     __tablename__ = 'posts'
 
-    id = db.Column(
-        db.Integer,
-        primary_key=True,
-    )
+#     id = db.Column(
+#         db.Integer,
+#         primary_key=True,
+#     )
 
-    image_url = db.Column(
-        db.Text,
-        default=DEFAULT_IMAGE_URL,
-        nullabl=False,
-    )
+#     image_url = db.Column(
+#         db.Text,
+#         default=DEFAULT_IMAGE_URL,
+#         nullabl=False,
+#     )
 
-    title = db.Column(
-        db.String(100),
-        nullable=False,
-    )
+#     title = db.Column(
+#         db.String(100),
+#         nullable=False,
+#     )
 
-    description = db.Column(
-        db.String(500),
-        nullable=False,
-    )
+#     description = db.Column(
+#         db.String(500),
+#         nullable=False,
+#     )
 
-    timestamp = db.Column(
-        db.DateTime,
-        nullable=False,
-        default=datetime.utcnow,
-    )
+#     timestamp = db.Column(
+#         db.DateTime,
+#         nullable=False,
+#         default=datetime.utcnow,
+#     )
 
-    original_website_link = db.Column(
-        db.Text,
-        default=DEFAULT_IMAGE_URL,
-    )
+#     original_website_link = db.Column(
+#         db.Text,
+#         default=DEFAULT_IMAGE_URL,
+#     )
 
-    user_id = db.Column(
-        db.Integer,
-        db.ForeignKey('users.id', ondelete='CASCADE')
-    )
-
-class CollectionsAndPins(db.Model):
-    """CollectionsAndPins"""
-
-    __tablename__ = 'collectionsAndPins'
-
-    collection_id = db.Column(
-        db.Integer,
-        db.ForeignKey('collection.id', ondelete="cascade"),
-        primary_key=True,
-    )
-
-    pin_id = db.Column(
-        db.Integer,
-        db.ForeignKey('pin.id', ondelete="cascade"),
-        primary_key=True,
-    )
+#     user_id = db.Column(
+#         db.Integer,
+#         db.ForeignKey('users.id', ondelete='CASCADE')
+#     )
 
 class Pins(db.Model):
     """Pins"""
 
-    __tablename__ = "pins"
+    __tablename__ = "pin"
 
     id = db.Column(
         db.Integer,
@@ -284,7 +267,7 @@ class Pins(db.Model):
 
     @classmethod
     def create(title, picture, link_to_original_pic, description, user_posted):
-        """Sign up user.
+        """Create a pin
 
         Hashes password and adds user to system.
         """
@@ -305,7 +288,7 @@ class Pins(db.Model):
 class Collections(db.Model):
     """Collections"""
 
-    __tablename__ = "collections"
+    __tablename__ = "collection"
 
     id = db.Column(
         db.Integer,
@@ -336,7 +319,7 @@ class Collections(db.Model):
 
     @classmethod
     def create(title, description, user_posted):
-        """Sign up user.
+        """Create a collection
 
         Hashes password and adds user to system.
         """
@@ -350,33 +333,52 @@ class Collections(db.Model):
 
         return collection
 
-    collection_and_pin = db.relationship(
-        "Collection and their pins",
-        secondary="pins",
-        primaryjoin=(CollectionsAndPins.collection_id == id),
-        secondaryjoin=(CollectionsAndPins.pin_id == id),
-    )
+    # collection_and_pin = db.relationship(
+    #     "Collection and their pins",
+    #     secondary="pins",
+    #     primaryjoin=(CollectionsAndPins.collection_id == id),
+    #     secondaryjoin=(CollectionsAndPins.pin_id == id),
+    # )
 
-class Tags(db.Model):
-    "Tags"
 
-    __tablename__ = "tags"
+class CollectionsAndPins(db.Model):
+    """CollectionsAndPins"""
 
-    id = db.Column(
+    __tablename__ = 'collectionsAndPins'
+
+    collection_id = db.Column(
         db.Integer,
+        db.ForeignKey('collection.id', ondelete="cascade"),
         primary_key=True,
     )
 
-    tag = db.Column(
-        db.String(100),
-        nullable=False,
-    )
-
-    post_id = db.Column(
+    pin_id = db.Column(
         db.Integer,
-        db.ForeignKey('posts.id', ondelete="cascade"),
+        db.ForeignKey('pin.id', ondelete="cascade"),
         primary_key=True,
     )
+
+
+# class Tags(db.Model):
+#     "Tags"
+
+#     __tablename__ = "tags"
+
+#     id = db.Column(
+#         db.Integer,
+#         primary_key=True,
+#     )
+
+#     tag = db.Column(
+#         db.String(100),
+#         nullable=False,
+#     )
+
+#     post_id = db.Column(
+#         db.Integer,
+#         db.ForeignKey('posts.id', ondelete="cascade"),
+#         primary_key=True,
+#     )
 
 def connect_db(app):
 
