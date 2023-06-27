@@ -68,6 +68,7 @@ connect_db(app)
 @app.before_request
 def add_user_to_g():
     header_token = request.headers.get('Authorization')
+
     print("HEADER TOKEN", header_token)
     if header_token:
         token = header_token.split(" ")[1]
@@ -81,7 +82,7 @@ def add_user_to_g():
                 g.user = curr_user
             except:
                 g.user = None
-                print("error")
+                print("error, could not verify token")
     else:
         g.user = None
 
@@ -186,8 +187,8 @@ def show_user(username):
     if not g.user:
         return (jsonify(message="Not Authorized"), 401)
 
-    user = User.query.get_or_404(username)
-
+    user = User.query.filter_by(username=username).first()
+    print(user)
     serialized = user.serialize()
     return jsonify( user= serialized)
 

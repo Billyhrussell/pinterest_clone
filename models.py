@@ -94,17 +94,17 @@ class User(db.Model):
         # serialization is python converting to JSON
         return{
             "username": self.username,
-            "first_name": self.firstName,
-            "last_name": self.lastName,
+            "first_name": self.first_name,
+            "last_name": self.last_name,
             "email" : self.email,
-            "image_url": self.imageUrl,
+            "image_url": self.image_url,
             "about" : self.about,
             "location" : self.location,
             "website" : self.website
         }
 
     def __repr__(self):
-        return f"<User #{self.username}: {self.fullName}>"
+        return f"<User #{self.username}>"
 
     @classmethod
     def signup(cls, username, password, firstName, lastName, email, about, location, website, image_url):
@@ -143,12 +143,16 @@ class User(db.Model):
         False.
         """
 
-        user = cls.query.filter_by(username=username).first()
 
+        user = cls.query.filter_by(username=username).first()
         if user:
-            is_auth = bcrypt.check_password_hash(user.password, password)
-            if is_auth:
+            if user.password == password:
                 return user
+        # FIXME: add this once running
+        # if user:
+        #     is_auth = bcrypt.check_password_hash(user.password, password)
+        #     if is_auth:
+        #         return user
 
         return False
 
