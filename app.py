@@ -35,31 +35,32 @@ os.environ['DATABASE_URL'].replace("postgres://", "postgresql://")
 app.config['SQLALCHEMY_ECHO'] = False
 app.config['SECRET_KEY'] = os.environ['SECRET_KEY']
 
+# with app.app_context():
 connect_db(app)
 
 # Check if the database needs to be initialized
-engine = sa.create_engine(app.config['SQLALCHEMY_DATABASE_URI'])
-inspector = sa.inspect(engine)
-if not inspector.has_table("messages"):
-    app.logger.info("trying 2 do the thing")
-    with app.app_context():
-        db.drop_all()
-        db.create_all()
+# engine = sa.create_engine(app.config['SQLALCHEMY_DATABASE_URI'])
+# inspector = sa.inspect(engine)
+# if not inspector.has_table("messages"):
+#     app.logger.info("trying 2 do the thing")
+#     with app.app_context():
+#         db.drop_all()
+#         db.create_all()
 
-        with open('generator/users.csv') as users:
-            db.session.bulk_insert_mappings(User, DictReader(users))
+#         with open('generator/users.csv') as users:
+#             db.session.bulk_insert_mappings(User, DictReader(users))
 
-        with open('generator/pins.csv') as pins:
-            db.session.bulk_insert_mappings(Pins, DictReader(pins))
+#         with open('generator/pins.csv') as pins:
+#             db.session.bulk_insert_mappings(Pins, DictReader(pins))
 
-        # with open('generator/collections.csv') as collections:
-        #     db.session.bulk_insert_mappings(Collections, DictReader(collections))
+#         # with open('generator/collections.csv') as collections:
+#         #     db.session.bulk_insert_mappings(Collections, DictReader(collections))
 
-        db.session.commit()
+#         db.session.commit()
 
-        app.logger.info('Initialized the database!')
-else:
-    app.logger.info('Database already contains the messages table.')
+#         app.logger.info('Initialized the database!')
+# else:
+#     app.logger.info('Database already contains the messages table.')
 
 ##############################################################################
 # User signup/login/logout

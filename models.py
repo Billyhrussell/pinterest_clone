@@ -164,57 +164,31 @@ class User(db.Model):
         backref="following",
     )
 
-    # FIXME: forgot how to do these
-    pins = db.relationship("Pins", secondary="pins", backref="user")
+    # FIXME: forgot how to do these, stores a users pins and collections
+    pins = db.relationship("Pins", backref="user")
     collections = db.relationship("Collections", backref="user")
 
+class CollectionsAndPins(db.Model):
+    """CollectionsAndPins"""
 
-# class Posts(db.Model):
-#     """ a post created """
-#     # FIXME: this need 2 be deleted
-#     __tablename__ = 'posts'
+    __tablename__ = "collectionsAndPins"
 
-#     id = db.Column(
-#         db.Integer,
-#         primary_key=True,
-#     )
+    collection_id = db.Column(
+        db.Integer,
+        db.ForeignKey('collections.id', ondelete="cascade"),
+        primary_key=True,
+    )
 
-#     image_url = db.Column(
-#         db.Text,
-#         default=DEFAULT_IMAGE_URL,
-#         nullabl=False,
-#     )
-
-#     title = db.Column(
-#         db.String(100),
-#         nullable=False,
-#     )
-
-#     description = db.Column(
-#         db.String(500),
-#         nullable=False,
-#     )
-
-#     timestamp = db.Column(
-#         db.DateTime,
-#         nullable=False,
-#         default=datetime.utcnow,
-#     )
-
-#     original_website_link = db.Column(
-#         db.Text,
-#         default=DEFAULT_IMAGE_URL,
-#     )
-
-#     user_id = db.Column(
-#         db.Integer,
-#         db.ForeignKey('users.id', ondelete='CASCADE')
-#     )
+    pin_id = db.Column(
+        db.Integer,
+        db.ForeignKey('pins.id', ondelete="cascade"),
+        primary_key=True,
+    )
 
 class Pins(db.Model):
     """Pins"""
 
-    __tablename__ = "pin"
+    __tablename__ = "pins"
 
     id = db.Column(
         db.Integer,
@@ -243,8 +217,7 @@ class Pins(db.Model):
 
     user_posted = db.Column(
         db.Integer,
-        db.ForeignKey('users.id', ondelete="cascade"),
-        primary_key=True,
+        db.ForeignKey('users.id', ondelete="cascade")
     )
 
     timestamp = db.Column(
@@ -288,7 +261,7 @@ class Pins(db.Model):
 class Collections(db.Model):
     """Collections"""
 
-    __tablename__ = "collection"
+    __tablename__ = "collections"
 
     id = db.Column(
         db.Integer,
@@ -307,8 +280,7 @@ class Collections(db.Model):
 
     user_id = db.Column(
         db.Integer,
-        db.ForeignKey('users.id', ondelete="cascade"),
-        primary_key=True,
+        db.ForeignKey('users.id', ondelete="cascade")
     )
 
     timestamp = db.Column(
@@ -333,30 +305,17 @@ class Collections(db.Model):
 
         return collection
 
+# FIXME: is this in the right area and/or what is wrong lol
     # collection_and_pin = db.relationship(
     #     "Collection and their pins",
     #     secondary="pins",
     #     primaryjoin=(CollectionsAndPins.collection_id == id),
     #     secondaryjoin=(CollectionsAndPins.pin_id == id),
+    #     backref="collections"
     # )
 
 
-class CollectionsAndPins(db.Model):
-    """CollectionsAndPins"""
 
-    __tablename__ = 'collectionsAndPins'
-
-    collection_id = db.Column(
-        db.Integer,
-        db.ForeignKey('collection.id', ondelete="cascade"),
-        primary_key=True,
-    )
-
-    pin_id = db.Column(
-        db.Integer,
-        db.ForeignKey('pin.id', ondelete="cascade"),
-        primary_key=True,
-    )
 
 
 # class Tags(db.Model):
