@@ -171,19 +171,22 @@ def list_users():
         flash("Access unauthorized.", "danger")
         return redirect("/")
 
-    search = request.args.get('q')
-
-    if not search:
-        users = User.query.all()
-    else:
-        users = User.query.filter(User.username.like(f"%{search}%")).all()
-
-    return render_template('users/index.html', users=users)
+    users = User.query.all()
+    ur = []
+    # search = request.args.get('q')
+    # NOTE: add filter? is this the correct way to serialize many?
+    # if not search:
+    #     users = User.query.all()
+    # else:
+    #     users = User.query.filter(User.username.like(f"%{search}%")).all()
+    for u in users:
+        ur.append(u.serialize())
+    return jsonify(users=ur)
 
 @app.get('/<username>')
 def show_user(username):
     """Show user profile."""
-
+    print(g.user)
     if not g.user:
         return (jsonify(message="Not Authorized"), 401)
 
