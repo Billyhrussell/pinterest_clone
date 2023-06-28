@@ -89,6 +89,18 @@ class User(db.Model):
         default=datetime.utcnow,
     )
 
+    followers = db.relationship(
+        "User",
+        secondary="follows",
+        primaryjoin=(Follows.user_being_followed_id == id),
+        secondaryjoin=(Follows.user_following_id == id),
+        backref="following",
+    )
+
+    pins = db.relationship("Pins", backref="user")
+    
+    collections = db.relationship("Collections", backref="user")
+
     def serialize(self):
         """Serialize to dictionary"""
         # serialization is python converting to JSON
@@ -160,17 +172,23 @@ class User(db.Model):
     # likes = db.relationship('Message', secondary="likes", backref="users_liked")
     # #backref like_messages
 
-    followers = db.relationship(
-        "User",
-        secondary="follows",
-        primaryjoin=(Follows.user_being_followed_id == id),
-        secondaryjoin=(Follows.user_following_id == id),
-        backref="following",
-    )
+    # followers = db.relationship(
+    #     "User",
+    #     secondary="follows",
+    #     primaryjoin=(Follows.user_being_followed_id == id),
+    #     secondaryjoin=(Follows.user_following_id == id),
+    #     backref="following",
+    # )
+
+    # following = db.relationship(
+    #     "User",
+    #     secondary="following",
+    #     primaryjoin=(Follows.user_following_id == id),
+    #     secondaryjoin=(Follows.user_being_followed_id == id),
+    #     backref="follows",
+    # )
 
     # FIXME: forgot how to do these, stores a users pins and collections
-    pins = db.relationship("Pins", backref="user")
-    collections = db.relationship("Collections", backref="user")
 
 class CollectionsAndPins(db.Model):
     """CollectionsAndPins"""

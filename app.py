@@ -92,7 +92,7 @@ def createToken(username):
 
 def upload_image_get_url(image):
     # Create bucket later for this app
-
+    # TODO:
     key = image.filename
     bucket = BUCKET_NAME
     content_type = 'request.mimetype'
@@ -118,7 +118,7 @@ def upload_image_get_url(image):
 
 @app.post('/signup')
 def signup():
-
+    # TEST:
     username = request.form["username"]
     password = request.form["password"]
     firstName = request.form["first_name"]
@@ -197,26 +197,25 @@ def show_user(username):
 
 @app.post('/profile-settings')
 def edit():
+    # TEST:
     if not g.user:
         return (jsonify(message="Not Authorized"), 401)
 
     user = User.query.get_or_404(request.json["id"])
 
-    user.username = request.form["username"]
-    user.firstName = request.form["first_name"]
-    user.lastName = request.form["last_name"]
-    user.email = request.form["email"]
-    user.image = request.form["image"]
-    user.about = request.form["about"]
-    user.website = request.form["website"]
+    user.username = request.json["username"]
+    user.firstName = request.json["first_name"]
+    user.lastName = request.json["last_name"]
+    user.email = request.json["email"]
+    user.image = request.json["image"]
+    user.about = request.json["about"]
+    user.website = request.json["website"]
 
     db.session.commit()
 
     serialized = user.serialize()
 
     return jsonify(user=serialized)
-
-
 
 
 ##############################################################################
@@ -234,15 +233,17 @@ def show_post(id):
 @app.post('/pin/create')
 def create_pin():
     "Create a pin"
+    # TEST:
 
-    title = request.form["title"]
-    description = request.form["description"]
-    picture = request.form["picture"]
-    original_picture_link = request.form["original-picture-link"]
+    title = request.json["title"]
+    description = request.json["description"]
+    picture = request.files["picture"]
+    original_picture_link = request.json["original-picture-link"]
     user_posted = g.user
 
+    pinImage = upload_image_get_url(picture)
     pin = Pins.create(
-        title, description, picture, original_picture_link, user_posted
+        title, description, picture, original_picture_link, user_posted, pinImage
     )
 
     g.user.pins.append(pin)
@@ -250,47 +251,53 @@ def create_pin():
 
     serialized = pin.serialize()
 
-    return jsonify(pin=pin)
+    return jsonify(pin=serialized)
 
 @app.post('/delete-pin')
 def delete_pin():
     "Delete a pin"
+    # WORKS, TODO: if the pin is a users, can delete.
+    #  (should not have delete functionality in frontend if not ur own pin)
 
     id = request.json["id"]
 
     pin = Pins.query.get_or_404(id)
 
-    g.user.pins.remove(pin)
-
+    # g.user.pins.remove(pin)
+    db.session.delete(pin)
     db.session.commit()
 
-    return jsonify(pin=pin)
+    serialized = pin.serialize()
 
-@app.get('/pin/')
+    return jsonify(pin=serialized)
+
+@app.get('/pin')
 def show_all():
     "Show all pins that exist"
     pins = Pins.query.all()
 
-    serialized = pins.serialize()
+    all_pins = []
+    for pin in pins:
+        all_pins.append(pin.serialize())
 
-    return jsonify(pins=pins)
+    return jsonify(pins=all_pins)
 
 @app.get('/<username>/created')
-def show_created_pins():
+def show_created_pins(username):
     """Show pins created by user"""
-    id = request.json["id"]
+    # FIXME: AttributeError: 'Query' object has no attribute 'pins'
+    # id = request.json["id"]
 
-    user = User.query.get_or_404(id)
+    user = User.query.filter_by(username=username)
     pins = user.pins()
 
-    # FIXME: can we return pins that have not been serialized?
-    # may have to fix this for most routes
     return jsonify(pins=pins)
 
 @app.get("/<username>/saved")
-def show_collections():
-    """Show collections """
-    id = request.json["id"]
+def show_collections(username):
+    """Show a users collections """
+    # TEST:
+    user = User.query.filter_by(username=username)
 
     user = User.query.get_or_404(id)
     collections = user.collections()
@@ -300,6 +307,7 @@ def show_collections():
 @app.get("/<username>/<title>")
 def show_pins_in_collection():
     """Show pins in a collection"""
+    # TEST:
     id = request.json["id"]
 
     collection = Collections.query.get_or_404(id)
@@ -310,7 +318,7 @@ def show_pins_in_collection():
 
 @app.post("/createBoard")
 def create_collection():
-
+    # TEST:
     title = request.form["title"]
     description = request.form["description"]
     # user_created = g.user
@@ -324,13 +332,14 @@ def create_collection():
 
 @app.post("/deleteBoard")
 def delete_collection():
+    # TEST:
     id = request.json[id]
 
     collection = Collections.query.get_or_404(id)
 
     g.user.collections.remove(collection)
+    db.session.delete(collection)
 
-    # NOTE: need to delete from collection table too?
     db.session.commit()
 
     return jsonify(collection=collection)
@@ -338,26 +347,35 @@ def delete_collection():
 ##############################################################################
 # Following and Followers
 @app.get('/<username>/following')
-def show_following():
+def show_following(username):
     """Show list of people this user is following."""
+    # TEST:
+    # user_id = request.json["id"]
+    # user = User.query.get_or_404(user_id)
 
-    user_id = request.json["id"]
+    user = User.query.filter_by(username=username).first()
 
-    user = User.query.get_or_404(user_id)
-    return render_template('users/following.html', user=user.following())
+    return jsonify(user=user.following())
 
 @app.get('/<username>/followers')
-def show_followers():
+def show_followers(username):
     """Show list of people this user is following."""
+    # TEST:
+    # user_id = request.json["id"]
+    # user = User.query.get_or_404(user_id)
 
-    user_id = request.json["id"]
+    user = User.query.filter_by(username=username).first()
 
-    user = User.query.get_or_404(user_id)
-    return render_template('users/following.html', user=user.followers())
+    # NOTE: with user.followers and user.pins,
+    # do we need to append serialized info to the user?
+    # or do we append and serialize later?
+    return jsonify(user=user.followers())
+
 
 @app.post('/follow/<id>')
 def follow(id):
     """follow a user"""
+    # FIXME: AttributeError: 'dict' object has no attribute 'following'
     follow_user = User.query.get_or_404(id)
 
     g.user.following.append(follow_user)
@@ -369,6 +387,8 @@ def follow(id):
 @app.post('/unfollow/<id>')
 def unfollow(id):
     """unfollow a user"""
+    # FIXME: AttributeError: 'dict' object has no attribute 'following'
+
     unfollow_user = User.query.get_or_404(id)
 
     g.user.following.remove(unfollow_user)
@@ -387,6 +407,7 @@ def unfollow(id):
 # /createPin DONE:
 # /username (default to saved) DONE:
 # /profile-settings DONE:
+
 
 # /username/created DONE:
 
