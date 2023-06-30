@@ -252,6 +252,7 @@ class Pins(db.Model):
         """Serialize to dictionary"""
         # serialization is python converting to JSON
         return{
+            "id" : self.id,
             "title": self.title,
             "picture": self.picture,
             "link_to_original_pic": self.link_to_original_pic,
@@ -310,6 +311,17 @@ class Collections(db.Model):
         nullable=False,
         default=datetime.utcnow,
     )
+
+    def serialize(self):
+        """Serialize to dictionary"""
+        # serialization is python converting to JSON
+        return{
+            "id" : self.id,
+            "title": self.title,
+            "description" : self.description,
+            "user_id": self.user_id,
+            "timestamp" : self.timestamp
+        }
 
     @classmethod
     def create(self, title, description, user_posted):

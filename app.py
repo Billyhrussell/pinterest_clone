@@ -233,7 +233,6 @@ def show_post(id):
 @app.post('/pin/create')
 def create_pin():
     "Create a pin"
-    # TEST:
 
     print("in create pin")
 
@@ -244,13 +243,15 @@ def create_pin():
     link_to_original_pic = request.json["link_to_original_pic"]
     user_posted = g.user["id"]
 
+    current_user = User.query.get_or_404(g.user["id"])
+
     print("in create pin")
     # pinImage = upload_image_get_url(picture)
     pin = Pins.create(
         title, picture, link_to_original_pic, description, user_posted
         )
 
-    g.user.pins.append(pin)
+    current_user.pins.append(pin)
     db.session.commit()
 
     serialized = pin.serialize()
@@ -260,20 +261,24 @@ def create_pin():
 @app.post('/delete-pin')
 def delete_pin():
     "Delete a pin"
-    # WORKS, TODO: if the pin is a users, can delete.
-    #  (should not have delete functionality in frontend if not ur own pin)
 
     id = request.json["id"]
 
     pin = Pins.query.get_or_404(id)
+    current_user = User.query.filter_by(username=g.user["username"]).first()
+    print("CURR", current_user.id,"PIN", pin.user_posted)
+    if current_user.id == pin.user_posted:
 
-    # g.user.pins.remove(pin)
-    db.session.delete(pin)
-    db.session.commit()
+        current_user.pins.remove(pin)
 
-    serialized = pin.serialize()
+        # g.user.pins.remove(pin)
+        db.session.delete(pin)
+        db.session.commit()
 
-    return jsonify(pin=serialized)
+        serialized = pin.serialize()
+        return jsonify(pin=serialized)
+
+    return jsonify(error="error")
 
 @app.get('/pin')
 def show_all():
@@ -289,34 +294,46 @@ def show_all():
 @app.get('/<username>/created')
 def show_created_pins(username):
     """Show pins created by user"""
-    # FIXME: AttributeError: 'Query' object has no attribute 'pins'
-    # id = request.json["id"]
 
-    user = User.query.filter_by(username=username)
-    pins = user.pins()
+    user = User.query.filter_by(username=username).first()
+    pins = user.pins
 
-    return jsonify(pins=pins)
+    p = []
+    for pin in pins:
+        p.append(pin.serialize())
+    return jsonify(pins=p)
 
 @app.get("/<username>/saved")
 def show_collections(username):
     """Show a users collections """
-    # TEST:
-    user = User.query.filter_by(username=username)
 
-    user = User.query.get_or_404(id)
-    collections = user.collections()
+    user = User.query.filter_by(username=username).first()
 
-    return jsonify(collections=collections)
+    # user = User.query.get_or_404(id)
+    collections = user.collections
+
+    user_collections = []
+
+    for c in collections:
+        user_collections.append(c.serialize())
+
+    return jsonify(collections=user_collections)
 
 @app.get("/<username>/<title>")
-def show_pins_in_collection():
+def show_pins_in_collection(username, title):
     """Show pins in a collection"""
     # TEST:
+    print("t1")
     id = request.json["id"]
+    print("t2")
 
     collection = Collections.query.get_or_404(id)
+    print("t3")
 
     pins = collection.collection_and_pins()
+    print("t4")
+
+
 
     return jsonify(pins=pins)
 
