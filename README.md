@@ -4,7 +4,7 @@ python3 -m venv venv
 
 source venv/bin/activate
 
-(venv) pip3 install requirements.txt
+(venv) pip3 install -r requirements.txt
 
 psql
 CREATE DATABASE pinterest;

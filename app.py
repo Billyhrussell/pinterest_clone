@@ -78,16 +78,16 @@ def add_user_to_g():
             try:
                 print("in try")
                 curr_user = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
-                print("CURR USER")
                 g.user = curr_user
+                print("CURR USER", g.user)
             except:
                 g.user = None
                 print("error, could not verify token")
     else:
         g.user = None
 
-def createToken(username):
-    encoded_jwt = jwt.encode({"username": username} , SECRET_KEY, algorithm='HS256')
+def createToken(username, id):
+    encoded_jwt = jwt.encode({"username": username, "id" : id} , SECRET_KEY, algorithm='HS256')
     return encoded_jwt
 
 def upload_image_get_url(image):
@@ -119,11 +119,11 @@ def upload_image_get_url(image):
 @app.post('/signup')
 def signup():
     # TEST:
-    username = request.form["username"]
-    password = request.form["password"]
-    firstName = request.form["first_name"]
-    lastName = request.form["last_name"]
-    email = request.form["email"]
+    username = request.json["username"]
+    password = request.json["password"]
+    firstName = request.json["first_name"]
+    lastName = request.json["last_name"]
+    email = request.json["email"]
 
     # when creating file, needs to multi
     # image = request.files["image"]
@@ -153,7 +153,7 @@ def login():
     if user == False:
         return (jsonify(message="Invalid username/password"), 401)
 
-    token = createToken(username)
+    token = createToken(username, user.id)
 
     return jsonify(token=token)
 
@@ -235,15 +235,19 @@ def create_pin():
     "Create a pin"
     # TEST:
 
+    print("in create pin")
+
     title = request.json["title"]
     description = request.json["description"]
-    picture = request.files["picture"]
-    original_picture_link = request.json["original-picture-link"]
-    user_posted = g.user
+    # picture = request.files["picture"]
+    picture = request.json["picture"]
+    original_picture_link = request.json["original_picture_link"]
+    user_posted = g.user["id"]
 
-    pinImage = upload_image_get_url(picture)
+    print("in create pin")
+    # pinImage = upload_image_get_url(picture)
     pin = Pins.create(
-        title, description, picture, original_picture_link, user_posted, pinImage
+        title, description, picture, original_picture_link, user_posted
     )
 
     g.user.pins.append(pin)
