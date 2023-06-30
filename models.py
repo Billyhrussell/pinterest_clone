@@ -98,7 +98,7 @@ class User(db.Model):
     )
 
     pins = db.relationship("Pins", backref="user")
-    
+
     collections = db.relationship("Collections", backref="user")
 
     def serialize(self):
@@ -221,10 +221,10 @@ class Pins(db.Model):
         db.String(100),
         nullable=False,
     )
-
+# make nullable = False
     picture = db.Column(
         db.String(),
-        nullable=False,
+        nullable=True,
     )
 
     link_to_original_pic = db.Column(
@@ -261,12 +261,12 @@ class Pins(db.Model):
         }
 
     @classmethod
-    def create(title, picture, link_to_original_pic, description, user_posted):
+    def create(self, title, picture, link_to_original_pic, description, user_posted):
         """Create a pin
 
         Hashes password and adds user to system.
         """
-
+        print(title, picture, link_to_original_pic, description, user_posted)
         pin = Pins(
             title=title,
             picture=picture,
@@ -312,7 +312,7 @@ class Collections(db.Model):
     )
 
     @classmethod
-    def create(title, description, user_posted):
+    def create(self, title, description, user_posted):
         """Create a collection
 
         Hashes password and adds user to system.

@@ -241,14 +241,14 @@ def create_pin():
     description = request.json["description"]
     # picture = request.files["picture"]
     picture = request.json["picture"]
-    original_picture_link = request.json["original_picture_link"]
+    link_to_original_pic = request.json["link_to_original_pic"]
     user_posted = g.user["id"]
 
     print("in create pin")
     # pinImage = upload_image_get_url(picture)
     pin = Pins.create(
-        title, description, picture, original_picture_link, user_posted
-    )
+        title, picture, link_to_original_pic, description, user_posted
+        )
 
     g.user.pins.append(pin)
     db.session.commit()
