@@ -251,7 +251,7 @@ class Pins(db.Model):
     collections = db.relationship(
         "Collections",
         secondary="collectionsAndPins",
-        backref="pins"
+        backref="pins_relationship"
     )
 
 
@@ -337,7 +337,7 @@ class Collections(db.Model):
     pins = db.relationship(
         "Pins",
         secondary="collectionsAndPins",
-        backref="collections")
+        backref="collections_relationship")
 
     def serialize(self):
         """Serialize to dictionary"""

@@ -322,20 +322,19 @@ def show_collections(username):
 @app.get("/<username>/<title>")
 def show_pins_in_collection(username, title):
     """Show pins in a collection"""
-    # TEST:
-    print("t1")
+
     id = request.json["id"]
-    print("t2")
 
     collection = Collections.query.get_or_404(id)
-    print("t3")
 
-    pins = collection.collection_and_pins()
-    print("t4")
+    pins = collection.pins
 
+    collection_pins = []
 
+    for pin in pins:
+        collection_pins.append(pin.serialize())
 
-    return jsonify(pins=pins)
+    return jsonify(pins=collection_pins)
 
 @app.post("/createBoard")
 def create_collection():
