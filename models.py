@@ -248,6 +248,13 @@ class Pins(db.Model):
         default=datetime.utcnow,
     )
 
+    collections = db.relationship(
+        "Collections",
+        secondary="collectionsAndPins",
+        backref="pins"
+    )
+
+
     def serialize(self):
         """Serialize to dictionary"""
         # serialization is python converting to JSON
@@ -319,13 +326,19 @@ class Collections(db.Model):
     #     secondaryjoin=(CollectionsAndPins.pin_id == id),
     #     backref="pins",
     # )
-    collection_and_pin = db.relationship(
-        "Collections",
-        secondary="pins",
-        primaryjoin=(CollectionsAndPins.collection_id == id),
-        secondaryjoin=(CollectionsAndPins.pin_id == id),
-        backref="collections"
-    )
+    # collection_and_pin = db.relationship(
+    #     "Collections",
+    #     secondary="pins",
+    #     primaryjoin=(CollectionsAndPins.collection_id == id),
+    #     secondaryjoin=(CollectionsAndPins.pin_id == id),
+    #     backref="collections"
+    # )
+
+    pins = db.relationship(
+        "Pins",
+        secondary="collectionsAndPins",
+        backref="collections")
+
     def serialize(self):
         """Serialize to dictionary"""
         # serialization is python converting to JSON
