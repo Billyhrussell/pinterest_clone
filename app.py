@@ -198,10 +198,13 @@ def show_user(username):
 @app.post('/profile-settings')
 def edit():
     # TEST:
+    # FIXME: does not change g.user once we change username
+
     if not g.user:
         return (jsonify(message="Not Authorized"), 401)
 
-    user = User.query.get_or_404(request.json["id"])
+    username = g.user["username"]
+    user = User.query.filter_by(username=username).first()
 
     user.username = request.json["username"]
     user.firstName = request.json["first_name"]
@@ -213,6 +216,7 @@ def edit():
 
     db.session.commit()
 
+    # g.user = user
     serialized = user.serialize()
 
     return jsonify(user=serialized)
@@ -338,84 +342,100 @@ def show_pins_in_collection(username, title):
 
 @app.post("/createBoard")
 def create_collection():
-    # TEST:
-    title = request.form["title"]
-    description = request.form["description"]
-    # user_created = g.user
 
-    collection = Collections.create(title,description)
-    g.user.collections.append(collection)
+    title = request.json["title"]
+    description = request.json["description"]
+
+
+    user = User.query.filter_by(username=g.user["username"]).first()
+
+    collection = Collections.create(title,description, user.id)
+    user.collections.append(collection)
 
     db.session.commit()
+    serialized = collection.serialize()
 
-    return jsonify(collection=collection)
+    return jsonify(collection=serialized)
 
 @app.post("/deleteBoard")
 def delete_collection():
-    # TEST:
-    id = request.json[id]
+    # NOTE:
+    # will we have a problem with deleting a collection with pins inside?
+    # also vice versa. if a person deletes a pin, the pin should delete from
+    # others collections
 
-    collection = Collections.query.get_or_404(id)
+    c_id = request.json["id"]
 
-    g.user.collections.remove(collection)
+    collection = Collections.query.get_or_404(c_id)
+
+    user = User.query.filter_by(username=g.user["username"]).first()
+    user.collections.remove(collection)
+
     db.session.delete(collection)
-
     db.session.commit()
 
-    return jsonify(collection=collection)
+    serialized = collection.serialize()
+
+    return jsonify(collection=serialized)
 
 ##############################################################################
 # Following and Followers
 @app.get('/<username>/following')
 def show_following(username):
     """Show list of people this user is following."""
-    # TEST:
-    # user_id = request.json["id"]
-    # user = User.query.get_or_404(user_id)
 
     user = User.query.filter_by(username=username).first()
 
-    return jsonify(user=user.following())
+    following = []
+    for u in user.following:
+        following.append(u.serialize())
+
+    return jsonify(following=following)
 
 @app.get('/<username>/followers')
 def show_followers(username):
     """Show list of people this user is following."""
-    # TEST:
-    # user_id = request.json["id"]
-    # user = User.query.get_or_404(user_id)
 
     user = User.query.filter_by(username=username).first()
+    followers = []
+    for u in user.followers:
+        followers.append(u.serialize())
 
     # NOTE: with user.followers and user.pins,
     # do we need to append serialized info to the user?
     # or do we append and serialize later?
-    return jsonify(user=user.followers())
+    return jsonify(followers=followers)
 
 
 @app.post('/follow/<id>')
 def follow(id):
     """follow a user"""
-    # FIXME: AttributeError: 'dict' object has no attribute 'following'
+
+    # NOTE: IS USER.QUER.FILTER_BY COSTLY??????? this seems so ineffcient
+    user = User.query.filter_by(username=g.user["username"]).first()
     follow_user = User.query.get_or_404(id)
 
-    g.user.following.append(follow_user)
+    user.following.append(follow_user)
 
     db.session.commit()
 
-    return jsonify(user=follow_user)
+    serialized = follow_user.serialize()
+
+    return jsonify(followed=serialized)
 
 @app.post('/unfollow/<id>')
 def unfollow(id):
     """unfollow a user"""
-    # FIXME: AttributeError: 'dict' object has no attribute 'following'
-
+    user = User.query.filter_by(username=g.user["username"]).first()
     unfollow_user = User.query.get_or_404(id)
 
-    g.user.following.remove(unfollow_user)
+    user.following.remove(unfollow_user)
 
     db.session.commit()
 
-    return jsonify(user=unfollow_user)
+    serialized = unfollow_user.serialize()
+
+    return jsonify(unfollowed=serialized)
 
 
 
