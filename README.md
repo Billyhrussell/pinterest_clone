@@ -12,13 +12,6 @@ CREATE DATABASE pinterest;
 
 (venv) python3 seed.py
 
-
-For LOCAL development install AWS Toolkit
-- https://marketplace.visualstudio.com/items?itemName=AmazonWebServices.aws-toolkit-vscode
-
-    Add a new connection using IAM credentials
-    Add region us-west-1
-
 Create .env file with
     region=<s>us-west-1</s>
     AWS_ACCESS_KEY_ID =  accesskey
@@ -31,7 +24,12 @@ Create .gitignore file with
     .env/
     venv/
 
-
 For Billy:
 - add access in IAM > users > user > AmazonS3FullAccess
 pip3.10 install -r requirements.txt
+
+For LOCAL development install AWS Toolkit
+- https://marketplace.visualstudio.com/items?itemName=AmazonWebServices.aws-toolkit-vscode
+
+    Add a new connection using IAM credentials
+    Add region us-west-1

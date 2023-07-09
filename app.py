@@ -167,18 +167,14 @@ def list_users():
     Can take a 'q' param in querystring to search by that username.
     """
 
+    #  NOTE: add search functionality
     if not g.user:
         flash("Access unauthorized.", "danger")
         return redirect("/")
 
     users = User.query.all()
     ur = []
-    # search = request.args.get('q')
-    # NOTE: add filter? is this the correct way to serialize many?
-    # if not search:
-    #     users = User.query.all()
-    # else:
-    #     users = User.query.filter(User.username.like(f"%{search}%")).all()
+
     for u in users:
         ur.append(u.serialize())
     return jsonify(users=ur)
