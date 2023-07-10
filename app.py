@@ -204,7 +204,7 @@ def edit():
     # username = "betcow"
     # username = g.user["username"]
     # user = User.query.filter_by(username=username).first()
-    user = User.query.get(id=g.user["id"])
+    user = User.query.get(g.user["id"])
 
     # user.username = "fretcow"
     user.username = request.json["username"]
