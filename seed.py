@@ -1,6 +1,6 @@
 from csv import DictReader
 from app import db
-from models import User, Collections, Pins, Follows, CollectionsAndPins
+from models import User, Collections, Pins, Follows
 from app import app
 
 with app.app_context():
@@ -19,7 +19,7 @@ with app.app_context():
     with open('generator/follows.csv') as follows:
         db.session.bulk_insert_mappings(Follows, DictReader(follows))
 
-    with open('generator/collections_and_pins.csv') as collectionsAndPins:
-        db.session.bulk_insert_mappings(CollectionsAndPins, DictReader(collectionsAndPins))
+    # with open('generator/collections_and_pins.csv') as collectionsAndPins:
+    #     db.session.bulk_insert_mappings(CollectionsAndPins, DictReader(collectionsAndPins))
 
     db.session.commit()

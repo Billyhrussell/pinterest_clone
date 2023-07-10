@@ -2,7 +2,7 @@ from datetime import datetime
 
 from flask_bcrypt import Bcrypt
 from flask_sqlalchemy import SQLAlchemy
-
+# import SQLAlchemy as sa
 bcrypt = Bcrypt()
 db = SQLAlchemy()
 
@@ -190,22 +190,22 @@ class User(db.Model):
 
     # FIXME: forgot how to do these, stores a users pins and collections
 
-class CollectionsAndPins(db.Model):
-    """CollectionsAndPins"""
+# class CollectionsAndPins(db.Model):
+#     """CollectionsAndPins"""
 
-    __tablename__ = "collectionsAndPins"
+#     __tablename__ = "collectionsAndPins"
 
-    collection_id = db.Column(
-        db.Integer,
-        db.ForeignKey('collections.id', ondelete="cascade"),
-        primary_key=True,
-    )
+#     collection_id = db.Column(
+#         db.Integer,
+#         db.ForeignKey('collections.id', ondelete="cascade"),
+#         primary_key=True,
+#     )
 
-    pin_id = db.Column(
-        db.Integer,
-        db.ForeignKey('pins.id', ondelete="cascade"),
-        primary_key=True,
-    )
+#     pin_id = db.Column(
+#         db.Integer,
+#         db.ForeignKey('pins.id', ondelete="cascade"),
+#         primary_key=True,
+#     )
 
 class Pins(db.Model):
     """Pins"""
@@ -248,12 +248,16 @@ class Pins(db.Model):
         default=datetime.utcnow,
     )
 
+    # collections = db.relationship(
+    #     "Collections",
+    #     secondary="collectionsAndPins",
+    #     backref="pins_relationship"
+    # )
+
     collections = db.relationship(
         "Collections",
-        secondary="collectionsAndPins",
-        backref="pins_relationship"
-    )
-
+        secondary="association_table",
+        backref="pins_relationship")
 
     def serialize(self):
         """Serialize to dictionary"""
@@ -334,10 +338,15 @@ class Collections(db.Model):
     #     backref="collections"
     # )
 
+    # pins = db.relationship(
+    #     "Pins",
+    #     secondary="collectionsAndPins",
+    #     backref="collections_relationship")
+
     pins = db.relationship(
-        "Pins",
-        secondary="collectionsAndPins",
-        backref="collections_relationship")
+    "Pins",
+    secondary="association_table",
+    backref="collections_relationship")
 
     def serialize(self):
         """Serialize to dictionary"""
@@ -375,7 +384,11 @@ class Collections(db.Model):
     #     backref="collections"
     # )
 
-
+association_table = db.Table(
+    "association_table",
+    db.Column("collection_id", db.ForeignKey(Collections.id), primary_key=True),
+    db.Column("pin_id", db.ForeignKey(Pins.id), primary_key=True)
+)
 
 
 

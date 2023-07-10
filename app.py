@@ -266,13 +266,13 @@ def create_pin():
 @app.post('/delete-pin')
 def delete_pin():
     "Delete a pin"
-
+    # FIXME: cannot delete a post within a collection
     id = request.json["id"]
 
     pin = Pins.query.get_or_404(id)
     # current_user = User.query.filter_by(username=g.user["username"]).first()
-    g_id = g.user["id"]
-    print("G.USER_ID: ", g.user["id"])
+
+    print("G.USER IN DELETE-PIN", g.user)
     current_user = User.query.get(g.user["id"])
     print("CURR", current_user.id,"PIN", pin.user_posted)
     if current_user.id == pin.user_posted:
