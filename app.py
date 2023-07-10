@@ -86,13 +86,15 @@ def add_user_to_g():
     else:
         g.user = None
 
-def createToken(username, id):
-    encoded_jwt = jwt.encode({"username": username, "id" : id} , SECRET_KEY, algorithm='HS256')
+def createToken(id):
+    encoded_jwt = jwt.encode({"id" : id} , SECRET_KEY, algorithm='HS256')
+
+    # encoded_jwt = jwt.encode({"username": username, "id" : id} , SECRET_KEY, algorithm='HS256')
     return encoded_jwt
 
 def upload_image_get_url(image):
     # Create bucket later for this app
-    # TODO:
+    # TODO: francis/filename
     key = image.filename
     bucket = BUCKET_NAME
     content_type = 'request.mimetype'
@@ -153,7 +155,7 @@ def login():
     if user == False:
         return (jsonify(message="Invalid username/password"), 401)
 
-    token = createToken(username, user.id)
+    token = createToken(user.id)
 
     return jsonify(token=token)
 
@@ -199,9 +201,12 @@ def edit():
     if not g.user:
         return (jsonify(message="Not Authorized"), 401)
 
-    username = g.user["username"]
-    user = User.query.filter_by(username=username).first()
+    # username = "betcow"
+    # username = g.user["username"]
+    # user = User.query.filter_by(username=username).first()
+    user = User.query.get(id=g.user["id"])
 
+    # user.username = "fretcow"
     user.username = request.json["username"]
     user.firstName = request.json["first_name"]
     user.lastName = request.json["last_name"]
@@ -265,7 +270,10 @@ def delete_pin():
     id = request.json["id"]
 
     pin = Pins.query.get_or_404(id)
-    current_user = User.query.filter_by(username=g.user["username"]).first()
+    # current_user = User.query.filter_by(username=g.user["username"]).first()
+    g_id = g.user["id"]
+    print("G.USER_ID: ", g.user["id"])
+    current_user = User.query.get(g.user["id"])
     print("CURR", current_user.id,"PIN", pin.user_posted)
     if current_user.id == pin.user_posted:
 
@@ -343,7 +351,8 @@ def create_collection():
     description = request.json["description"]
 
 
-    user = User.query.filter_by(username=g.user["username"]).first()
+    # user = User.query.filter_by(username=g.user["username"]).first()
+    user = User.query.get(g.user["id"])
 
     collection = Collections.create(title,description, user.id)
     user.collections.append(collection)
@@ -364,7 +373,9 @@ def delete_collection():
 
     collection = Collections.query.get_or_404(c_id)
 
-    user = User.query.filter_by(username=g.user["username"]).first()
+    # user = User.query.filter_by(username=g.user["username"]).first()
+    user = User.query.get(g.user["id"])
+
     user.collections.remove(collection)
 
     db.session.delete(collection)
@@ -407,8 +418,10 @@ def show_followers(username):
 def follow(id):
     """follow a user"""
 
-    # NOTE: IS USER.QUER.FILTER_BY COSTLY??????? this seems so ineffcient
-    user = User.query.filter_by(username=g.user["username"]).first()
+    # NOTE: IS USER.QUER.FILTER_BY COSTLY??????? this seems ineffcient
+    # user = User.query.filter_by(username=g.user["username"]).first()
+    user = User.query.get(g.user["id"])
+
     follow_user = User.query.get_or_404(id)
 
     user.following.append(follow_user)
@@ -422,7 +435,9 @@ def follow(id):
 @app.post('/unfollow/<id>')
 def unfollow(id):
     """unfollow a user"""
-    user = User.query.filter_by(username=g.user["username"]).first()
+    # user = User.query.filter_by(username=g.user["username"]).first()
+    user = User.query.get(g.user["id"])
+
     unfollow_user = User.query.get_or_404(id)
 
     user.following.remove(unfollow_user)
