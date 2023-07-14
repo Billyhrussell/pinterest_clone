@@ -6,6 +6,7 @@ from flask import Flask, render_template, request, flash, redirect, session, g, 
 from flask_cors import CORS
 from sqlalchemy.exc import IntegrityError
 import sqlalchemy as sa
+import uuid
 from models import db, connect_db, User, Pins, Collections
 
 import jwt
@@ -94,8 +95,7 @@ def createToken(id):
 
 def upload_image_get_url(image):
     # Create bucket later for this app
-    # TODO: francis/filename
-    key = image.filename
+    key = uuid.uuid4()
     bucket = BUCKET_NAME
     content_type = 'request.mimetype'
     image_file = image
