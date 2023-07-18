@@ -70,7 +70,10 @@ connect_db(app)
 def add_user_to_g():
     header_token = request.headers.get('Authorization')
 
-    print("HEADER TOKEN", header_token)
+    header = request.headers
+    print("HEADERS ", header)
+
+    # print("HEADER TOKEN", header_token)
     if header_token:
         token = header_token.split(" ")[1]
         print("BEARER TOKEN", token)
@@ -147,10 +150,13 @@ def signup():
 
 @app.post('/login')
 def login():
+
     username = request.json["username"]
     password = request.json["password"]
-
     user = User.authenticate(username, password)
+
+    print("IN LOGIN ", user)
+
 
     if user == False:
         return (jsonify(message="Invalid username/password"), 401)
@@ -221,6 +227,18 @@ def edit():
     serialized = user.serialize()
 
     return jsonify(user=serialized)
+
+@app.post('/user-info')
+def getUserInfo():
+    if not g.user:
+        return (jsonify(message="Not Authorized"), 401)
+
+    user = User.query.get(g.user["id"])
+
+    serialized = user.serialize()
+
+    return jsonify(user=serialized)
+
 
 
 ##############################################################################
