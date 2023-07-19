@@ -403,6 +403,24 @@ def delete_collection():
 
     return jsonify(collection=serialized)
 
+@app.post("/addPinToCollection")
+def add_pin_to_collection():
+    pin_id = request.json["pinId"]
+    collection_id = request.json["collectionId"]
+
+    collection = Collections.query.get(collection_id)
+    pin = Pins.query.get(pin_id)
+
+    collection.pins.append(pin)
+
+    db.session.commit()
+
+    serialized = pin.serialize()
+
+    return jsonify(pin=serialized)
+
+
+
 ##############################################################################
 # Following and Followers
 @app.get('/<username>/following')

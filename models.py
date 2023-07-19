@@ -191,22 +191,11 @@ class User(db.Model):
 
     # FIXME: forgot how to do these, stores a users pins and collections
 
-# class CollectionsAndPins(db.Model):
-#     """CollectionsAndPins"""
-
-#     __tablename__ = "collectionsAndPins"
-
-#     collection_id = db.Column(
-#         db.Integer,
-#         db.ForeignKey('collections.id', ondelete="cascade"),
-#         primary_key=True,
-#     )
-
-#     pin_id = db.Column(
-#         db.Integer,
-#         db.ForeignKey('pins.id', ondelete="cascade"),
-#         primary_key=True,
-#     )
+association_table = db.Table(
+    "association_table",
+    db.Column("collection_id", db.ForeignKey('collections.id'), primary_key=True),
+    db.Column("pin_id", db.ForeignKey('pins.id'), primary_key=True)
+)
 
 class Pins(db.Model):
     """Pins"""
@@ -249,16 +238,10 @@ class Pins(db.Model):
         default=datetime.utcnow,
     )
 
-    # collections = db.relationship(
-    #     "Collections",
-    #     secondary="collectionsAndPins",
-    #     backref="pins_relationship"
-    # )
-
     collections = db.relationship(
         "Collections",
         secondary="association_table",
-        backref="pins_relationship")
+        back_populates="pins")
 
     def serialize(self):
         """Serialize to dictionary"""
@@ -347,7 +330,7 @@ class Collections(db.Model):
     pins = db.relationship(
     "Pins",
     secondary="association_table",
-    backref="collections_relationship")
+    back_populates="collections")
 
     def serialize(self):
         """Serialize to dictionary"""
@@ -385,13 +368,37 @@ class Collections(db.Model):
     #     backref="collections"
     # )
 
-association_table = db.Table(
-    "association_table",
-    db.Column("collection_id", db.ForeignKey(Collections.id), primary_key=True),
-    db.Column("pin_id", db.ForeignKey(Pins.id), primary_key=True)
-)
 
 
+
+
+def connect_db(app):
+
+    """Connect this database to provided Flask app.
+
+    You should call this in your Flask app.
+    """
+
+    db.app = app
+    db.init_app(app)
+
+
+    # class CollectionsAndPins(db.Model):
+#     """CollectionsAndPins"""
+
+#     __tablename__ = "collectionsAndPins"
+
+#     collection_id = db.Column(
+#         db.Integer,
+#         db.ForeignKey('collections.id', ondelete="cascade"),
+#         primary_key=True,
+#     )
+
+#     pin_id = db.Column(
+#         db.Integer,
+#         db.ForeignKey('pins.id', ondelete="cascade"),
+#         primary_key=True,
+#     )
 
 # class Tags(db.Model):
 #     "Tags"
@@ -413,13 +420,3 @@ association_table = db.Table(
 #         db.ForeignKey('posts.id', ondelete="cascade"),
 #         primary_key=True,
 #     )
-
-def connect_db(app):
-
-    """Connect this database to provided Flask app.
-
-    You should call this in your Flask app.
-    """
-
-    db.app = app
-    db.init_app(app)
