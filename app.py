@@ -190,7 +190,7 @@ def list_users():
 @app.get('/<username>')
 def show_user(username):
     """Show user profile."""
-    print(g.user)
+    print("USERNAME ", username)
     if not g.user:
         return (jsonify(message="Not Authorized"), 401)
 
@@ -348,10 +348,10 @@ def show_collections(username):
 @app.get("/<username>/<title>")
 def show_pins_in_collection(username, title):
     """Show pins in a collection"""
-
+    # FIXME: not grabbing pins?
     id = request.json["id"]
 
-    collection = Collections.query.get_or_404(id)
+    collection = Collections.query.get_or_404(6)
 
     pins = collection.pins
 
