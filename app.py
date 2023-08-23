@@ -2,11 +2,12 @@ import os
 import boto3
 from dotenv import load_dotenv
 from csv import DictReader
-from flask import Flask, render_template, request, flash, redirect, session, g, jsonify
+from flask import Flask, render_template, request, flash, redirect, session, g, jsonify, make_response
 from flask_cors import CORS
 from sqlalchemy.exc import IntegrityError
 import sqlalchemy as sa
 import uuid
+
 from models import db, connect_db, User, Pins, Collections
 
 import jwt
@@ -26,7 +27,7 @@ s3 = boto3.client(
 )
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, supports_credentials=True)
 
 # Get DB_URI from environ variable (useful for production/testing) or,
 # if not set there, use development local db.
@@ -66,35 +67,64 @@ connect_db(app)
 ##############################################################################
 # User signup/login/logout
 
+# @app.before_request
+# def add_user_to_g():
+#     header_token = request.headers.get('Authorization')
+
+#     header = request.headers
+#     print("HEADERS ", header)
+
+#     # print("HEADER TOKEN", header_token)
+#     if header_token:
+#         token = header_token.split(" ")[1]
+#         print("BEARER TOKEN", token)
+#         print("TOKEN:", token)
+#         if token:
+#             try:
+#                 print("in try")
+#                 curr_user = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+#                 g.user = curr_user
+#                 print("CURR USER", g.user)
+#             except:
+#                 g.user = None
+#                 print("error, could not verify token")
+#     else:
+#         g.user = None
+
 @app.before_request
 def add_user_to_g():
-    header_token = request.headers.get('Authorization')
+    """ Add user to global, check if user token same as header token"""
+    token = request.cookies.get('token')
+    print("TOKEN: ", token)
 
     header = request.headers
     print("HEADERS ", header)
 
-    # print("HEADER TOKEN", header_token)
-    if header_token:
-        token = header_token.split(" ")[1]
-        print("BEARER TOKEN", token)
-        print("TOKEN:", token)
-        if token:
-            try:
-                print("in try")
-                curr_user = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
-                g.user = curr_user
-                print("CURR USER", g.user)
-            except:
-                g.user = None
-                print("error, could not verify token")
+    # if header_token:
+    #     token = header_token
+    if token:
+        try:
+            print("in try")
+            curr_user = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+            g.user = curr_user
+            print("CURR USER", g.user)
+        except:
+            g.user = None
+            print("error, could not verify token")
     else:
         g.user = None
 
+
 def createToken(id):
+    # info: set_cookie with the userId and token
     encoded_jwt = jwt.encode({"id" : id} , SECRET_KEY, algorithm='HS256')
 
-    # encoded_jwt = jwt.encode({"username": username, "id" : id} , SECRET_KEY, algorithm='HS256')
-    return encoded_jwt
+    response = make_response(jsonify(message='Cookie Set Successfully'))
+
+    response.set_cookie("token", encoded_jwt, httponly=True)
+    response.set_cookie("user-id", str(id), max_age=3600)
+
+    return response
 
 def upload_image_get_url(image):
     # Create bucket later for this app
@@ -123,30 +153,42 @@ def upload_image_get_url(image):
 
 @app.post('/signup')
 def signup():
-    # TEST:
+    # TODO: add try/except for username/email that is already taken
+    # move try/except somewhere else
     username = request.json["username"]
     password = request.json["password"]
-    firstName = request.json["first_name"]
-    lastName = request.json["last_name"]
+    firstName = request.json["firstName"]
+    lastName = request.json["lastName"]
     email = request.json["email"]
 
-    # when creating file, needs to multi
+    # when creating file, needs to add to AWS
     # image = request.files["image"]
-
     # userImg = upload_image_get_url(image)
+
+    try:
+        if User.query.filter_by(username=username).first():
+            error = "username taken"
+            return error
+    except:
+        "nothing happens"
+
+    try:
+        print("INSIDE TRY SIGNUP")
+        if User.query.filter_by(email=email).first():
+            error = "email already in use"
+            return error
+    except:
+        "nothing happens"
 
     user = User.signup(
         username, password, firstName, lastName, email
     )
-    print("USER", user)
-    print("USERNAME", username)
-    # print("IMAGE", image)
-    # serialized = user.serialize()
+
     db.session.commit()
 
     token = createToken(username)
 
-    return jsonify(token=token)
+    return token
 
 @app.post('/login')
 def login():
@@ -155,15 +197,12 @@ def login():
     password = request.json["password"]
     user = User.authenticate(username, password)
 
-    print("IN LOGIN ", user)
-
-
     if user == False:
         return (jsonify(message="Invalid username/password"), 401)
 
     token = createToken(user.id)
 
-    return jsonify(token=token)
+    return token
 
 # ##############################################################################
 # # General user routes: IF LOGGED IN
@@ -172,50 +211,59 @@ def login():
 def list_users():
     """Page with listing of users.
 
-    Can take a 'q' param in querystring to search by that username.
+    Further study: Can take a 'q' param in querystring to search by that username.
+    (search functionality)
     """
 
-    #  NOTE: add search functionality
     if not g.user:
-        flash("Access unauthorized.", "danger")
-        return redirect("/")
+        return (jsonify(message="Not Authorized"), 401)
 
     users = User.query.all()
-    ur = []
+    user_list = []
 
     for u in users:
-        ur.append(u.serialize())
-    return jsonify(users=ur)
+        user_list.append(u.serialize())
+
+    return jsonify(users=user_list)
 
 @app.get('/<username>')
 def show_user(username):
     """Show user profile."""
-    print("USERNAME ", username)
+
     if not g.user:
         return (jsonify(message="Not Authorized"), 401)
 
     user = User.query.filter_by(username=username).first()
-    print(user)
-    serialized = user.serialize()
-    return jsonify( user= serialized)
 
-@app.post('/profile-settings')
-def edit():
-    # TEST:
-    # FIXME: does not change g.user once we change username
+    serialized = user.serialize()
+    return jsonify(user= serialized)
+
+@app.patch('/profile-settings')
+def edit_profile():
 
     if not g.user:
         return (jsonify(message="Not Authorized"), 401)
 
-    # username = "betcow"
-    # username = g.user["username"]
-    # user = User.query.filter_by(username=username).first()
     user = User.query.get(g.user["id"])
 
-    # user.username = "fretcow"
+    try:
+        if User.query.filter_by(username=request.json["username"]).first():
+            error = "username taken"
+            return jsonify(error=error)
+    except:
+        "nothing happens"
+
+    try:
+        print("INSIDE TRY PROFILE SETTINGS")
+        if User.query.filter_by(email=request.json["email"]).first():
+            error = "email already in use"
+            return jsonify(error=error)
+    except:
+        "nothing happens"
+
     user.username = request.json["username"]
-    user.firstName = request.json["first_name"]
-    user.lastName = request.json["last_name"]
+    user.firstName = request.json["firstName"]
+    user.lastName = request.json["lastName"]
     user.email = request.json["email"]
     user.image = request.json["image"]
     user.about = request.json["about"]
@@ -223,7 +271,6 @@ def edit():
 
     db.session.commit()
 
-    # g.user = user
     serialized = user.serialize()
 
     return jsonify(user=serialized)
@@ -244,12 +291,12 @@ def getUserInfo():
 ##############################################################################
 # PINS AND COLLECTIONS
 @app.get('/pin/<id>')
-def show_post(id):
+def show_pin(id):
     """Show a pin"""
 
     pin = Pins.query.get_or_404(id)
-
     serialized = pin.serialize()
+    print("PIN: ", serialized)
 
     return jsonify(pin=serialized)
 
@@ -281,10 +328,10 @@ def create_pin():
 
     return jsonify(pin=serialized)
 
-@app.post('/delete-pin')
+@app.post('/pin/delete')
 def delete_pin():
     "Delete a pin"
-    # FIXME: cannot delete a post within a collection
+    # FIXME: cannot delete a post within a collection, change to app.delete
     id = request.json["id"]
 
     pin = Pins.query.get_or_404(id)
@@ -306,9 +353,10 @@ def delete_pin():
 
     return jsonify(error="error")
 
-@app.get('/pin')
+@app.get('/pins')
 def show_all():
     "Show all pins that exist"
+    # TODO: further study, show pins by following
     pins = Pins.query.all()
 
     all_pins = []
@@ -345,13 +393,11 @@ def show_collections(username):
 
     return jsonify(collections=user_collections)
 
-@app.get("/<username>/<title>")
-def show_pins_in_collection(username, title):
+@app.get("/<username>/<title>/<id>")
+def show_pins_in_collection(username, title, id):
     """Show pins in a collection"""
-    # FIXME: not grabbing pins?
-    id = request.json["id"]
 
-    collection = Collections.query.get_or_404(6)
+    collection = Collections.query.get_or_404(id)
 
     pins = collection.pins
 
@@ -362,7 +408,7 @@ def show_pins_in_collection(username, title):
 
     return jsonify(pins=collection_pins)
 
-@app.post("/createBoard")
+@app.post("/createCollection")
 def create_collection():
 
     title = request.json["title"]
@@ -419,6 +465,22 @@ def add_pin_to_collection():
 
     return jsonify(pin=serialized)
 
+@app.post("/removePinFromCollection")
+def remove_pin_from_collection():
+    pin_id = request.json["pinId"]
+    collection_id = request.json["collectionId"]
+
+    collection = Collections.query.get(collection_id)
+    pin = Pins.query.get(pin_id)
+
+    collection.pins.remove(pin)
+
+    db.session.commit()
+
+    serialized = pin.serialize()
+
+    return jsonify(pin=serialized)
+
 
 
 ##############################################################################
@@ -448,7 +510,6 @@ def show_followers(username):
     # do we need to append serialized info to the user?
     # or do we append and serialize later?
     return jsonify(followers=followers)
-
 
 @app.post('/follow/<id>')
 def follow(id):
