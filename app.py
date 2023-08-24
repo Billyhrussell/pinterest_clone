@@ -15,7 +15,7 @@ import jwt
 load_dotenv()
 AWS_ACCESS_KEY_ID = os.environ['AWS_ACCESS_KEY_ID']
 AWS_SECRET_ACCESS_KEY = os.environ['AWS_SECRET_ACCESS_KEY']
-DATABSE_URL = os.environ['DATABASE_URL']
+DATABASE_URL = os.environ['DATABASE_URL']
 BUCKET_NAME = os.environ['BUCKET_NAME']
 SECRET_KEY = os.environ['SECRET_KEY']
 
@@ -165,30 +165,27 @@ def signup():
     # image = request.files["image"]
     # userImg = upload_image_get_url(image)
 
-    try:
-        if User.query.filter_by(username=username).first():
-            error = "username taken"
-            return error
-    except:
-        "nothing happens"
+    taken = []
+    usernameErr = User.checkIfUsernameTaken(request.json["username"])
+    emailErr = User.checkIfEmailTaken(request.json["email"])
 
-    try:
-        print("INSIDE TRY SIGNUP")
-        if User.query.filter_by(email=email).first():
-            error = "email already in use"
-            return error
-    except:
-        "nothing happens"
+    if usernameErr:
+        taken.append(usernameErr)
+    if emailErr:
+        taken.append(emailErr)
 
-    user = User.signup(
-        username, password, firstName, lastName, email
-    )
+    if not taken:
+        user = User.signup(
+            username, password, firstName, lastName, email
+        )
 
-    db.session.commit()
+        db.session.commit()
 
-    token = createToken(username)
+        token = createToken(user.id)
 
-    return token
+        return token
+    else:
+        return jsonify(error=taken)
 
 @app.post('/login')
 def login():
@@ -246,45 +243,45 @@ def edit_profile():
 
     user = User.query.get(g.user["id"])
 
-    try:
-        if User.query.filter_by(username=request.json["username"]).first():
-            error = "username taken"
-            return jsonify(error=error)
-    except:
-        "nothing happens"
+    taken = []
+    if user.username != request.json["username"]:
+        usernameErr = User.checkIfUsernameTaken(request.json["username"])
+        if usernameErr:
+            taken.append(usernameErr)
+    if user.email != request.json["email"]:
+        emailErr = User.checkIfEmailTaken(request.json["email"])
+        if emailErr:
+            taken.append(emailErr)
 
-    try:
-        print("INSIDE TRY PROFILE SETTINGS")
-        if User.query.filter_by(email=request.json["email"]).first():
-            error = "email already in use"
-            return jsonify(error=error)
-    except:
-        "nothing happens"
+    if not taken:
+        user.username = request.json["username"]
+        user.first_name = request.json["firstName"]
+        user.last_name = request.json["lastName"]
+        user.email = request.json["email"]
+        user.image_url = request.json["imageUrl"]
+        user.about = request.json["about"]
+        user.website = request.json["website"]
+        user.location = request.json["location"]
 
-    user.username = request.json["username"]
-    user.firstName = request.json["firstName"]
-    user.lastName = request.json["lastName"]
-    user.email = request.json["email"]
-    user.image = request.json["image"]
-    user.about = request.json["about"]
-    user.website = request.json["website"]
+        db.session.commit()
 
-    db.session.commit()
+        serialized = user.serialize()
 
-    serialized = user.serialize()
+        return jsonify(user=serialized)
+    else:
+        return jsonify(error=taken)
 
-    return jsonify(user=serialized)
+# @app.post('/user-info')
+# def getUserInfo():
+# note: not necessary, use <username> route
+#     if not g.user:
+#         return (jsonify(message="Not Authorized"), 401)
 
-@app.post('/user-info')
-def getUserInfo():
-    if not g.user:
-        return (jsonify(message="Not Authorized"), 401)
+#     user = User.query.get(g.user["id"])
 
-    user = User.query.get(g.user["id"])
+#     serialized = user.serialize()
 
-    serialized = user.serialize()
-
-    return jsonify(user=serialized)
+#     return jsonify(user=serialized)
 
 
 
@@ -292,11 +289,13 @@ def getUserInfo():
 # PINS AND COLLECTIONS
 @app.get('/pin/<id>')
 def show_pin(id):
-    """Show a pin"""
+    """Get a pin by id"""
+
+    if not g.user:
+        return (jsonify(message="Not Authorized"), 401)
 
     pin = Pins.query.get_or_404(id)
     serialized = pin.serialize()
-    print("PIN: ", serialized)
 
     return jsonify(pin=serialized)
 
@@ -304,21 +303,21 @@ def show_pin(id):
 def create_pin():
     "Create a pin"
 
-    print("in create pin")
+    if not g.user:
+        return (jsonify(message="Not Authorized"), 401)
 
     title = request.json["title"]
     description = request.json["description"]
     # picture = request.files["picture"]
-    picture = request.json["picture"]
-    link_to_original_pic = request.json["link_to_original_pic"]
-    user_posted = g.user["id"]
+    pin_image = request.json["pinImage"]
+    original_link = request.json["originalLink"]
+    user_id = g.user["id"]
 
     current_user = User.query.get_or_404(g.user["id"])
 
-    print("in create pin")
     # pinImage = upload_image_get_url(picture)
     pin = Pins.create(
-        title, picture, link_to_original_pic, description, user_posted
+        title, pin_image, original_link, description, user_id
         )
 
     current_user.pins.append(pin)

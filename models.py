@@ -79,7 +79,7 @@ class User(db.Model):
 
     website = db.Column(
         db.Text,
-        nullable=False,
+        # nullable=False,
         unique=False,
     )
 
@@ -120,7 +120,7 @@ class User(db.Model):
         return f"<User #{self.username}>"
 
     @classmethod
-    def signup(cls, username, password, firstName, lastName, email, about, location, website, image_url):
+    def signup(cls, username, password, firstName, lastName, email):
         """Sign up user.
 
         Hashes password and adds user to system.
@@ -130,14 +130,15 @@ class User(db.Model):
 
         user = User(
             username=username,
-            password=hashed_pwd,
+            # password=hashed_pwd,
+            password=password,
             first_name=firstName,
             last_name=lastName,
             email=email,
-            about=about,
-            location=location,
-            website=website,
-            image_url=image_url
+            # about=about,
+            # location=location,
+            # website=website,
+            # image_url=image_url
         )
 
         db.session.add(user)
@@ -168,6 +169,38 @@ class User(db.Model):
         #         return user
 
         return False
+
+    @classmethod
+    def checkIfUsernameTaken(cls, username):
+        """ Check if a username or email is taken by another user"""
+
+        error = ""
+
+        try:
+            if User.query.filter_by(username=username).first():
+                error += "username taken"
+
+        except:
+            "nothing happens"
+
+        return error
+
+    @classmethod
+    def checkIfEmailTaken(cls, email):
+        """ Check if a username or email is taken by another user"""
+
+        error = ""
+
+        try:
+            if User.query.filter_by(email=email).first():
+                error += "email already in use"
+
+        except:
+            "nothing happens"
+
+        return error
+
+
 
     # messages = db.relationship('Message', backref="user")
     # likes = db.relationship('Message', secondary="likes", backref="users_liked")
@@ -212,12 +245,12 @@ class Pins(db.Model):
         nullable=False,
     )
 # make nullable = False
-    picture = db.Column(
+    pin_image = db.Column(
         db.String(),
         nullable=True,
     )
 
-    link_to_original_pic = db.Column(
+    original_link = db.Column(
         db.String(),
         nullable=True,
     )
@@ -227,7 +260,7 @@ class Pins(db.Model):
         nullable=True,
     )
 
-    user_posted = db.Column(
+    user_id = db.Column(
         db.Integer,
         db.ForeignKey('users.id', ondelete="cascade")
     )
@@ -249,26 +282,26 @@ class Pins(db.Model):
         return{
             "id" : self.id,
             "title": self.title,
-            "picture": self.picture,
-            "link_to_original_pic": self.link_to_original_pic,
+            "pin_image": self.pin_image,
+            "original_link": self.original_link,
             "description" : self.description,
-            "user_posted": self.user_posted,
+            "user_id": self.user_id,
             "timestamp" : self.timestamp
         }
 
     @classmethod
-    def create(self, title, picture, link_to_original_pic, description, user_posted):
+    def create(self, title, pin_image, original_link, description, user_id):
         """Create a pin
 
         Hashes password and adds user to system.
         """
-        print(title, picture, link_to_original_pic, description, user_posted)
+        print(title, pin_image, original_link, description, user_id)
         pin = Pins(
             title=title,
-            picture=picture,
-            link_to_original_pic=link_to_original_pic,
+            pin_image=pin_image,
+            original_link=original_link,
             description=description,
-            user_posted=user_posted,
+            user_id=user_id,
         )
 
         db.session.add(pin)
