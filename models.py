@@ -282,10 +282,10 @@ class Pins(db.Model):
         return{
             "id" : self.id,
             "title": self.title,
-            "pin_image": self.pin_image,
-            "original_link": self.original_link,
+            "pinImage": self.pin_image,
+            "originalLink": self.original_link,
             "description" : self.description,
-            "user_id": self.user_id,
+            "userId": self.user_id,
             "timestamp" : self.timestamp
         }
 

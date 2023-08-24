@@ -308,7 +308,6 @@ def create_pin():
 
     title = request.json["title"]
     description = request.json["description"]
-    # picture = request.files["picture"]
     pin_image = request.json["pinImage"]
     original_link = request.json["originalLink"]
     user_id = g.user["id"]
@@ -327,23 +326,20 @@ def create_pin():
 
     return jsonify(pin=serialized)
 
-@app.post('/pin/delete')
-def delete_pin():
+@app.delete('/pin/<id>')
+def delete_pin(id):
     "Delete a pin"
-    # FIXME: cannot delete a post within a collection, change to app.delete
-    id = request.json["id"]
+
+    if not g.user:
+        return (jsonify(message="Not Authorized"), 401)
 
     pin = Pins.query.get_or_404(id)
-    # current_user = User.query.filter_by(username=g.user["username"]).first()
 
-    print("G.USER IN DELETE-PIN", g.user)
     current_user = User.query.get(g.user["id"])
-    print("CURR", current_user.id,"PIN", pin.user_posted)
-    if current_user.id == pin.user_posted:
 
+    if current_user.id == pin.user_id:
         current_user.pins.remove(pin)
 
-        # g.user.pins.remove(pin)
         db.session.delete(pin)
         db.session.commit()
 
@@ -393,8 +389,9 @@ def show_collections(username):
     return jsonify(collections=user_collections)
 
 @app.get("/<username>/<title>/<id>")
-def show_pins_in_collection(username, title, id):
+def show_pins_in_collection(id):
     """Show pins in a collection"""
+    # NOTE: want to make sure we are viewing the persons page
 
     collection = Collections.query.get_or_404(id)
 
