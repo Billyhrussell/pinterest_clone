@@ -493,20 +493,16 @@ def show_followers(username):
 
     user = User.query.filter_by(username=username).first()
     followers = []
+
     for u in user.followers:
         followers.append(u.serialize())
 
-    # NOTE: with user.followers and user.pins,
-    # do we need to append serialized info to the user?
-    # or do we append and serialize later?
     return jsonify(followers=followers)
 
 @app.post('/follow/<id>')
 def follow(id):
-    """follow a user"""
+    """Follow a user"""
 
-    # NOTE: IS USER.QUER.FILTER_BY COSTLY??????? this seems ineffcient
-    # user = User.query.filter_by(username=g.user["username"]).first()
     user = User.query.get(g.user["id"])
 
     follow_user = User.query.get_or_404(id)
@@ -521,8 +517,8 @@ def follow(id):
 
 @app.post('/unfollow/<id>')
 def unfollow(id):
-    """unfollow a user"""
-    # user = User.query.filter_by(username=g.user["username"]).first()
+    """Unfollow a user"""
+
     user = User.query.get(g.user["id"])
 
     unfollow_user = User.query.get_or_404(id)
@@ -531,24 +527,6 @@ def unfollow(id):
 
     db.session.commit()
 
-    serialized = unfollow_user.serialize()
+    unfollowed = f'Unfollowed user {unfollow_user.id}'
 
-    return jsonify(unfollowed=serialized)
-
-
-
-
-
-# /login DONE:
-# /signup DONE:
-# /
-# /createPin DONE:
-# /username (default to saved) DONE:
-# /profile-settings DONE:
-
-
-# /username/created DONE:
-
-# /username/collectionName DONE:
-
-# /pin/PinId DONE:
+    return jsonify(success=unfollowed)
