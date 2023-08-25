@@ -308,7 +308,6 @@ class Pins(db.Model):
 
         return pin
 
-
 class Collections(db.Model):
     """Collections"""
 
@@ -392,19 +391,6 @@ class Collections(db.Model):
 
         return collection
 
-# FIXME: is this in the right area and/or what is wrong lol
-    # collection_and_pin = db.relationship(
-    #     "Collection and their pins",
-    #     secondary="pins",
-    #     primaryjoin=(CollectionsAndPins.collection_id == id),
-    #     secondaryjoin=(CollectionsAndPins.pin_id == id),
-    #     backref="collections"
-    # )
-
-
-
-
-
 def connect_db(app):
 
     """Connect this database to provided Flask app.
@@ -416,22 +402,7 @@ def connect_db(app):
     db.init_app(app)
 
 
-    # class CollectionsAndPins(db.Model):
-#     """CollectionsAndPins"""
 
-#     __tablename__ = "collectionsAndPins"
-
-#     collection_id = db.Column(
-#         db.Integer,
-#         db.ForeignKey('collections.id', ondelete="cascade"),
-#         primary_key=True,
-#     )
-
-#     pin_id = db.Column(
-#         db.Integer,
-#         db.ForeignKey('pins.id', ondelete="cascade"),
-#         primary_key=True,
-#     )
 
 # class Tags(db.Model):
 #     "Tags"

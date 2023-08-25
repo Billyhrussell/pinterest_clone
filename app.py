@@ -388,10 +388,9 @@ def show_collections(username):
 
     return jsonify(collections=user_collections)
 
-@app.get("/<username>/<title>/<id>")
+@app.get("/collection/<id>")
 def show_pins_in_collection(id):
     """Show pins in a collection"""
-    # NOTE: want to make sure we are viewing the persons page
 
     collection = Collections.query.get_or_404(id)
 
@@ -404,14 +403,12 @@ def show_pins_in_collection(id):
 
     return jsonify(pins=collection_pins)
 
-@app.post("/createCollection")
+@app.post("/collection/create")
 def create_collection():
 
     title = request.json["title"]
     description = request.json["description"]
 
-
-    # user = User.query.filter_by(username=g.user["username"]).first()
     user = User.query.get(g.user["id"])
 
     collection = Collections.create(title,description, user.id)
@@ -422,7 +419,7 @@ def create_collection():
 
     return jsonify(collection=serialized)
 
-@app.post("/deleteBoard")
+@app.delete("/collection/delete")
 def delete_collection():
     # NOTE:
     # will we have a problem with deleting a collection with pins inside?
@@ -433,7 +430,6 @@ def delete_collection():
 
     collection = Collections.query.get_or_404(c_id)
 
-    # user = User.query.filter_by(username=g.user["username"]).first()
     user = User.query.get(g.user["id"])
 
     user.collections.remove(collection)
@@ -441,9 +437,9 @@ def delete_collection():
     db.session.delete(collection)
     db.session.commit()
 
-    serialized = collection.serialize()
+    # serialized = collection.serialize()
 
-    return jsonify(collection=serialized)
+    return jsonify(deleted=collection.id)
 
 @app.post("/addPinToCollection")
 def add_pin_to_collection():
@@ -457,11 +453,11 @@ def add_pin_to_collection():
 
     db.session.commit()
 
-    serialized = pin.serialize()
+    added = f'pin {pin.id} added to collection {collection.id}'
 
-    return jsonify(pin=serialized)
+    return jsonify(success=added)
 
-@app.post("/removePinFromCollection")
+@app.patch("/removePinFromCollection")
 def remove_pin_from_collection():
     pin_id = request.json["pinId"]
     collection_id = request.json["collectionId"]
@@ -473,11 +469,9 @@ def remove_pin_from_collection():
 
     db.session.commit()
 
-    serialized = pin.serialize()
+    removed = f'pin {pin.id} removed from collection {collection.id}'
 
-    return jsonify(pin=serialized)
-
-
+    return jsonify(success=removed)
 
 ##############################################################################
 # Following and Followers
