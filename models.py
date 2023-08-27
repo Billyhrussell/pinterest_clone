@@ -130,8 +130,8 @@ class User(db.Model):
 
         user = User(
             username=username,
-            # password=hashed_pwd,
-            password=password,
+            password=hashed_pwd,
+            # password=password,
             first_name=firstName,
             last_name=lastName,
             email=email,

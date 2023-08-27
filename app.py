@@ -1,16 +1,17 @@
 import os
 import boto3
 from dotenv import load_dotenv
-from csv import DictReader
-from flask import Flask, render_template, request, flash, redirect, session, g, jsonify, make_response
+from flask import Flask, request, g, jsonify, make_response
 from flask_cors import CORS
-from sqlalchemy.exc import IntegrityError
-import sqlalchemy as sa
+
+
 import uuid
 
 from models import db, connect_db, User, Pins, Collections
 
 import jwt
+
+app = Flask(__name__)
 
 load_dotenv()
 AWS_ACCESS_KEY_ID = os.environ['AWS_ACCESS_KEY_ID']
@@ -26,14 +27,23 @@ s3 = boto3.client(
     aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
 )
 
-app = Flask(__name__)
+
 CORS(app, supports_credentials=True)
+
+TESTING = os.environ.get('TESTING', False)
 
 # Get DB_URI from environ variable (useful for production/testing) or,
 # if not set there, use development local db.
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql:///pinterest'
-os.environ['DATABASE_URL'].replace("postgres://", "postgresql://")
+
+# Checks if running tests
+if TESTING:
+    print(f"TESTING true {TESTING}")
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql:///pinterest_test'
+else:
+    print(f"TESTING false {TESTING}")
+    app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
+
 app.config['SQLALCHEMY_ECHO'] = False
 app.config['SECRET_KEY'] = os.environ['SECRET_KEY']
 
@@ -193,7 +203,7 @@ def login():
     username = request.json["username"]
     password = request.json["password"]
     user = User.authenticate(username, password)
-
+    #TODO: Change to if not User
     if user == False:
         return (jsonify(message="Invalid username/password"), 401)
 
@@ -336,6 +346,7 @@ def delete_pin(id):
     pin = Pins.query.get_or_404(id)
 
     current_user = User.query.get(g.user["id"])
+
 
     if current_user.id == pin.user_id:
         current_user.pins.remove(pin)
