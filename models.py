@@ -8,6 +8,7 @@ db = SQLAlchemy()
 
 DEFAULT_IMAGE_URL = "https://static.vecteezy.com/system/resources/thumbnails/009/734/564/small/default-avatar-profile-icon-of-social-media-user-vector.jpg"
 
+
 class Follows(db.Model):
     """Connection of a follower <-> followed_user."""
 
@@ -24,6 +25,7 @@ class Follows(db.Model):
         db.ForeignKey('users.id', ondelete="cascade"),
         primary_key=True,
     )
+
 
 class User(db.Model):
     """User in the system."""
@@ -104,16 +106,16 @@ class User(db.Model):
     def serialize(self):
         """Serialize to dictionary"""
         # serialization is python converting to JSON
-        return{
+        return {
             "username": self.username,
             "id": self.id,
             "first_name": self.first_name,
             "last_name": self.last_name,
-            "email" : self.email,
+            "email": self.email,
             "image_url": self.image_url,
-            "about" : self.about,
-            "location" : self.location,
-            "website" : self.website
+            "about": self.about,
+            "location": self.location,
+            "website": self.website
         }
 
     def __repr__(self):
@@ -157,16 +159,15 @@ class User(db.Model):
         False.
         """
 
-
         user = cls.query.filter_by(username=username).first()
-        if user:
-            if user.password == password:
-                return user
-        # FIXME: add this once running
         # if user:
-        #     is_auth = bcrypt.check_password_hash(user.password, password)
-        #     if is_auth:
+        #     if user.password == password:
         #         return user
+        # FIXME: add this once running, I think this can be a one liner
+        if user:
+            is_auth = bcrypt.check_password_hash(user.password, password)
+            if is_auth:
+                return user
 
         return False
 
@@ -200,8 +201,6 @@ class User(db.Model):
 
         return error
 
-
-
     # messages = db.relationship('Message', backref="user")
     # likes = db.relationship('Message', secondary="likes", backref="users_liked")
     # #backref like_messages
@@ -223,12 +222,13 @@ class User(db.Model):
     # )
 
     # FIXME: forgot how to do these, stores a users pins and collections
-
 association_table = db.Table(
     "association_table",
-    db.Column("collection_id", db.ForeignKey('collections.id'), primary_key=True),
+    db.Column("collection_id", db.ForeignKey(
+        'collections.id'), primary_key=True),
     db.Column("pin_id", db.ForeignKey('pins.id'), primary_key=True)
 )
+
 
 class Pins(db.Model):
     """Pins"""
@@ -279,14 +279,14 @@ class Pins(db.Model):
     def serialize(self):
         """Serialize to dictionary"""
         # serialization is python converting to JSON
-        return{
-            "id" : self.id,
+        return {
+            "id": self.id,
             "title": self.title,
             "pinImage": self.pin_image,
             "originalLink": self.original_link,
-            "description" : self.description,
+            "description": self.description,
             "userId": self.user_id,
-            "timestamp" : self.timestamp
+            "timestamp": self.timestamp
         }
 
     @classmethod
@@ -307,6 +307,7 @@ class Pins(db.Model):
         db.session.add(pin)
 
         return pin
+
 
 class Collections(db.Model):
     """Collections"""
@@ -360,19 +361,19 @@ class Collections(db.Model):
     #     backref="collections_relationship")
 
     pins = db.relationship(
-    "Pins",
-    secondary="association_table",
-    back_populates="collections")
+        "Pins",
+        secondary="association_table",
+        back_populates="collections")
 
     def serialize(self):
         """Serialize to dictionary"""
         # serialization is python converting to JSON
-        return{
-            "id" : self.id,
+        return {
+            "id": self.id,
             "title": self.title,
-            "description" : self.description,
+            "description": self.description,
             "user_id": self.user_id,
-            "timestamp" : self.timestamp
+            "timestamp": self.timestamp
         }
 
     @classmethod
@@ -391,8 +392,8 @@ class Collections(db.Model):
 
         return collection
 
-def connect_db(app):
 
+def connect_db(app):
     """Connect this database to provided Flask app.
 
     You should call this in your Flask app.
@@ -400,8 +401,6 @@ def connect_db(app):
 
     db.app = app
     db.init_app(app)
-
-
 
 
 # class Tags(db.Model):

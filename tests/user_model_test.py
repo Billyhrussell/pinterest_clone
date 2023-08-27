@@ -6,10 +6,6 @@ from tests.base_test import BaseTestCase
 from flask_bcrypt import Bcrypt
 bcrypt = Bcrypt()
 
-# # Change os.env before importing app
-# os.environ['TESTING'] = 'True'
-# from app import app, db
-
 
 DEFAULT_IMAGE_URL = "https://static.vecteezy.com/system/resources/thumbnails/009/734/564/small/default-avatar-profile-icon-of-social-media-user-vector.jpg"
 
@@ -48,17 +44,16 @@ class UserModelTestCase(BaseTestCase):
 
     def test_authenticate_valid(self):
         with self.app.app_context():
-            print("u1id--------------", self.u1_id)
+
             user = User.query.filter_by(id=self.u1_id).first()
-            print(f'user---------{user.serialize()}')
-            # authenticated_user = User.authenticate("u1", user["password"])
-            # print(f'authenticated_user---------{authenticated_user}')
+            authenticated_user = User.authenticate("u1", "password")
+            self.assertEqual(authenticated_user.username, user.username)
+            self.assertEqual(authenticated_user.email, user.email)
 
-            # self.assertEqual(authenticated_user["username"], user["username"])
+    def test_authenticate_invalid(self):
+        with self.app.app_context():
 
-    # def test_authenticate_invalid(self):
-    #     authenticated_user = User.authenticate(self.user_data['username'], "wrongpassword")
-    #     self.assertFalse(authenticated_user)
-
-# if __name__ == '__main__':
-#     unittest.main()
+            user = User.query.filter_by(id=self.u1_id).first()
+            self.assertEqual(user.username, "u1")
+            authenticated_user = User.authenticate("u1", "passw13414ord")
+            self.assertEqual(authenticated_user, False)
