@@ -30,7 +30,7 @@ s3 = boto3.client(
 
 CORS(app, supports_credentials=True)
 
-
+# TODO:Throw errors on try/except's
 
 # Get DB_URI from environ variable (useful for production/testing) or,
 # if not set there, use development local db.
