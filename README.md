@@ -33,3 +33,7 @@ For LOCAL development install AWS Toolkit
 
     Add a new connection using IAM credentials
     Add region us-west-1
+
+For running server with auto reload
+-  flask run --debug -p <specify port>
+

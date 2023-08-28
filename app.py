@@ -16,7 +16,7 @@ app = Flask(__name__)
 load_dotenv()
 AWS_ACCESS_KEY_ID = os.environ['AWS_ACCESS_KEY_ID']
 AWS_SECRET_ACCESS_KEY = os.environ['AWS_SECRET_ACCESS_KEY']
-DATABASE_URL = os.environ['DATABASE_URL']
+# DATABASE_URL = os.environ['DATABASE_URL']
 BUCKET_NAME = os.environ['BUCKET_NAME']
 SECRET_KEY = os.environ['SECRET_KEY']
 
@@ -30,24 +30,18 @@ s3 = boto3.client(
 
 CORS(app, supports_credentials=True)
 
-TESTING = os.environ.get('TESTING', False)
+
 
 # Get DB_URI from environ variable (useful for production/testing) or,
 # if not set there, use development local db.
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
-# Checks if running tests
-if TESTING:
-    print(f"TESTING true {TESTING}")
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql:///pinterest_test'
-else:
-    print(f"TESTING false {TESTING}")
-    app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
+app.config['SQLALCHEMY_DATABASE_URI'] = (
+    os.environ['DATABASE_URL'].replace("postgres://", "postgresql://"))
 
 app.config['SQLALCHEMY_ECHO'] = False
 app.config['SECRET_KEY'] = os.environ['SECRET_KEY']
 
-# with app.app_context():
+
 connect_db(app)
 
 # Check if the database needs to be initialized
@@ -101,6 +95,7 @@ connect_db(app)
 #     else:
 #         g.user = None
 
+
 @app.before_request
 def add_user_to_g():
     """ Add user to global, check if user token same as header token"""
@@ -127,7 +122,7 @@ def add_user_to_g():
 
 def createToken(id):
     # info: set_cookie with the userId and token
-    encoded_jwt = jwt.encode({"id" : id} , SECRET_KEY, algorithm='HS256')
+    encoded_jwt = jwt.encode({"id": id}, SECRET_KEY, algorithm='HS256')
 
     response = make_response(jsonify(message='Cookie Set Successfully'))
 
@@ -135,6 +130,7 @@ def createToken(id):
     response.set_cookie("user-id", str(id), max_age=3600)
 
     return response
+
 
 def upload_image_get_url(image):
     # Create bucket later for this app
@@ -197,13 +193,14 @@ def signup():
     else:
         return jsonify(error=taken)
 
+
 @app.post('/login')
 def login():
 
     username = request.json["username"]
     password = request.json["password"]
     user = User.authenticate(username, password)
-    #TODO: Change to if not User
+    # TODO: Change to if not User
     if user == False:
         return (jsonify(message="Invalid username/password"), 401)
 
@@ -213,6 +210,7 @@ def login():
 
 # ##############################################################################
 # # General user routes: IF LOGGED IN
+
 
 @app.get('/users')
 def list_users():
@@ -233,6 +231,7 @@ def list_users():
 
     return jsonify(users=user_list)
 
+
 @app.get('/<username>')
 def show_user(username):
     """Show user profile."""
@@ -243,7 +242,8 @@ def show_user(username):
     user = User.query.filter_by(username=username).first()
 
     serialized = user.serialize()
-    return jsonify(user= serialized)
+    return jsonify(user=serialized)
+
 
 @app.patch('/profile-settings')
 def edit_profile():
@@ -294,7 +294,6 @@ def edit_profile():
 #     return jsonify(user=serialized)
 
 
-
 ##############################################################################
 # PINS AND COLLECTIONS
 @app.get('/pin/<id>')
@@ -308,6 +307,7 @@ def show_pin(id):
     serialized = pin.serialize()
 
     return jsonify(pin=serialized)
+
 
 @app.post('/pin/create')
 def create_pin():
@@ -327,7 +327,7 @@ def create_pin():
     # pinImage = upload_image_get_url(picture)
     pin = Pins.create(
         title, pin_image, original_link, description, user_id
-        )
+    )
 
     current_user.pins.append(pin)
     db.session.commit()
@@ -335,6 +335,7 @@ def create_pin():
     serialized = pin.serialize()
 
     return jsonify(pin=serialized)
+
 
 @app.delete('/pin/<id>')
 def delete_pin(id):
@@ -347,7 +348,6 @@ def delete_pin(id):
 
     current_user = User.query.get(g.user["id"])
 
-
     if current_user.id == pin.user_id:
         current_user.pins.remove(pin)
 
@@ -358,6 +358,7 @@ def delete_pin(id):
         return jsonify(pin=serialized)
 
     return jsonify(error="error")
+
 
 @app.get('/pins')
 def show_all():
@@ -371,6 +372,7 @@ def show_all():
 
     return jsonify(pins=all_pins)
 
+
 @app.get('/<username>/created')
 def show_created_pins(username):
     """Show pins created by user"""
@@ -382,6 +384,7 @@ def show_created_pins(username):
     for pin in pins:
         p.append(pin.serialize())
     return jsonify(pins=p)
+
 
 @app.get("/<username>/saved")
 def show_collections(username):
@@ -399,6 +402,7 @@ def show_collections(username):
 
     return jsonify(collections=user_collections)
 
+
 @app.get("/collection/<id>")
 def show_pins_in_collection(id):
     """Show pins in a collection"""
@@ -414,6 +418,7 @@ def show_pins_in_collection(id):
 
     return jsonify(pins=collection_pins)
 
+
 @app.post("/collection/create")
 def create_collection():
 
@@ -422,13 +427,14 @@ def create_collection():
 
     user = User.query.get(g.user["id"])
 
-    collection = Collections.create(title,description, user.id)
+    collection = Collections.create(title, description, user.id)
     user.collections.append(collection)
 
     db.session.commit()
     serialized = collection.serialize()
 
     return jsonify(collection=serialized)
+
 
 @app.delete("/collection/delete")
 def delete_collection():
@@ -452,6 +458,7 @@ def delete_collection():
 
     return jsonify(deleted=collection.id)
 
+
 @app.post("/addPinToCollection")
 def add_pin_to_collection():
     pin_id = request.json["pinId"]
@@ -467,6 +474,7 @@ def add_pin_to_collection():
     added = f'pin {pin.id} added to collection {collection.id}'
 
     return jsonify(success=added)
+
 
 @app.patch("/removePinFromCollection")
 def remove_pin_from_collection():
@@ -486,6 +494,8 @@ def remove_pin_from_collection():
 
 ##############################################################################
 # Following and Followers
+
+
 @app.get('/<username>/following')
 def show_following(username):
     """Show list of people this user is following."""
@@ -498,6 +508,7 @@ def show_following(username):
 
     return jsonify(following=following)
 
+
 @app.get('/<username>/followers')
 def show_followers(username):
     """Show list of people this user is following."""
@@ -509,6 +520,7 @@ def show_followers(username):
         followers.append(u.serialize())
 
     return jsonify(followers=followers)
+
 
 @app.post('/follow/<id>')
 def follow(id):
@@ -525,6 +537,7 @@ def follow(id):
     serialized = follow_user.serialize()
 
     return jsonify(followed=serialized)
+
 
 @app.post('/unfollow/<id>')
 def unfollow(id):
