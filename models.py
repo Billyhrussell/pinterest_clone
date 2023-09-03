@@ -160,14 +160,14 @@ class User(db.Model):
         """
 
         user = cls.query.filter_by(username=username).first()
-        if user:
-            if user.password == password:
-                return user
-        # FIXME: add this once running, I think this can be a one liner
         # if user:
-        #     is_auth = bcrypt.check_password_hash(user.password, password)
-        #     if is_auth:
+        #     if user.password == password:
         #         return user
+        # FIXME: add this once running, I think this can be a one liner
+        if user:
+            is_auth = bcrypt.check_password_hash(user.password, password)
+            if is_auth:
+                return user
 
         return False
 

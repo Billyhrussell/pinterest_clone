@@ -100,10 +100,10 @@ connect_db(app)
 def add_user_to_g():
     """ Add user to global, check if user token same as header token"""
     token = request.cookies.get('token')
-    print("TOKEN: ", token)
+    # print("TOKEN: ", token)
 
     header = request.headers
-    print("HEADERS ", header)
+    # print("HEADERS ", header)
 
     # if header_token:
     #     token = header_token
@@ -119,8 +119,10 @@ def add_user_to_g():
     else:
         g.user = None
 
-
+# FIXME :Rename,or split into 2 separate functions 1 for creating the token
+# and another for the response
 def createToken(id):
+    """Creates a Token"""
     # info: set_cookie with the userId and token
     encoded_jwt = jwt.encode({"id": id}, SECRET_KEY, algorithm='HS256')
 
@@ -203,9 +205,9 @@ def login():
     # TODO: Change to if not User
     if user == False:
         return (jsonify(message="Invalid username/password"), 401)
-
+    # FIXME: rename to response, createToken returns a response
     token = createToken(user.id)
-
+    print("FROM ROUTE", token.headers)
     return token
 
 # ##############################################################################
